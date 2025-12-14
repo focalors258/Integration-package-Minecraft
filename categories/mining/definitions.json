@@ -1,0 +1,134 @@
+{
+	"fortune+0.1": {
+		"title": "+0.1 时运",
+		"icon": {
+			"type": "item",
+			"data": {
+				"item": "diamond"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "puffish_skills:player.fortune",
+					"value": 0.1,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "fijbnsh28mtxo31w"
+		}
+	},
+	"mining_speed+3%": {
+		"title": "+5% 挖掘速度",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "haste"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "puffish_skills:player.mining_speed",
+					"value": 0.05,
+					"operation": "multiply_base"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "bgxpp2j09w97oph2"
+		}
+	},
+	"stamina+0.5": {
+		"title": "+0.5食物存储 ",
+		"icon": {
+			"type": "item",
+			"data": {
+				"item": "chicken"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "puffish_skills:player.stamina",
+					"value": 0.5,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "umhi3bm98rt07608"
+		}
+	},
+	"movement_speed+5%": {
+		"title": "+2% 移动速度",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "speed"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.movement_speed",
+					"value": 0.02,
+					"operation": "multiply_total"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "8jubsi8w8tql81lb"
+		}
+	},
+	"stamina+5%": {
+		"title": "+0.25 幸运",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "luck"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.luck",
+					"value": 0.25,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "u2pv2o6z9hxfzdbp"
+		}
+	},
+	"jump+5%": {
+		"title": "+2% 跳跃高度",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "jump_boost"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "puffish_skills:player.jump",
+					"value": 0.02,
+					"operation": "multiply_total"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "csj8u850kl8xq9wg"
+		}
+	}
+}

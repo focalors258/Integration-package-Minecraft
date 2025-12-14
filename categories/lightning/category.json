@@ -1,0 +1,22 @@
+{
+	"unlocked_by_default": true,
+	"exclusive_root": true,
+	"title": "雷法术技能",
+	"icon": {
+		"type": "effect",
+		"data": {
+			"effect": "kubejs:lightning"
+		}
+	},
+	"background": {
+"texture":"kubejs:gui/skill_tree_background.png",
+
+"width": 2048,
+		"height": 2048,
+		"position": "fill"
+
+
+
+
+}
+}

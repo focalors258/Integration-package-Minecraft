@@ -1,0 +1,512 @@
+{
+	"-13_-1": {
+		"definition": "fortune+0.1",
+		"x": -416,
+		"y": -32,
+		"root": false
+	},
+	"-13_1": {
+		"definition": "stamina+5%",
+		"x": -416,
+		"y": 32,
+		"root": false
+	},
+	"-11_-2": {
+		"definition": "movement_speed+5%",
+		"x": -352,
+		"y": -64,
+		"root": false
+	},
+	"-11_2": {
+		"definition": "jump+5%",
+		"x": -352,
+		"y": 64,
+		"root": false
+	},
+	"-10_-8": {
+		"definition": "stamina+5%",
+		"x": -320,
+		"y": -256,
+		"root": false
+	},
+	"-10_-4": {
+		"definition": "mining_speed+3%",
+		"x": -320,
+		"y": -128,
+		"root": false
+	},
+	"-10_4": {
+		"definition": "mining_speed+3%",
+		"x": -320,
+		"y": 128,
+		"root": false
+	},
+	"-10_8": {
+		"definition": "fortune+0.1",
+		"x": -320,
+		"y": 256,
+		"root": false
+	},
+	"-9_-6": {
+		"definition": "jump+5%",
+		"x": -288,
+		"y": -192,
+		"root": false
+	},
+	"-9_1": {
+		"definition": "movement_speed+5%",
+		"x": -288,
+		"y": 32,
+		"root": false
+	},
+	"-9_6": {
+		"definition": "movement_speed+5%",
+		"x": -288,
+		"y": 192,
+		"root": false
+	},
+	"-8_-10": {
+		"definition": "fortune+0.1",
+		"x": -256,
+		"y": -320,
+		"root": false
+	},
+	"-8_-3": {
+		"definition": "stamina+0.5",
+		"x": -256,
+		"y": -96,
+		"root": false
+	},
+	"-8_3": {
+		"definition": "mining_speed+3%",
+		"x": -256,
+		"y": 96,
+		"root": false
+	},
+	"-8_10": {
+		"definition": "stamina+5%",
+		"x": -256,
+		"y": 320,
+		"root": false
+	},
+	"-7_-5": {
+		"definition": "movement_speed+5%",
+		"x": -224,
+		"y": -160,
+		"root": false
+	},
+	"-7_5": {
+		"definition": "jump+5%",
+		"x": -224,
+		"y": 160,
+		"root": false
+	},
+	"-6_-9": {
+		"definition": "movement_speed+5%",
+		"x": -192,
+		"y": -288,
+		"root": false
+	},
+	"-6_-2": {
+		"definition": "stamina+5%",
+		"x": -192,
+		"y": -64,
+		"root": false
+	},
+	"-6_2": {
+		"definition": "stamina+0.5",
+		"x": -192,
+		"y": 64,
+		"root": false
+	},
+	"-6_9": {
+		"definition": "jump+5%",
+		"x": -192,
+		"y": 288,
+		"root": false
+	},
+	"-5_-7": {
+		"definition": "jump+5%",
+		"x": -160,
+		"y": -224,
+		"root": false
+	},
+	"-5_7": {
+		"definition": "movement_speed+5%",
+		"x": -160,
+		"y": 224,
+		"root": false
+	},
+	"-4_-10": {
+		"definition": "mining_speed+3%",
+		"x": -128,
+		"y": -320,
+		"root": false
+	},
+	"-4_-1": {
+		"definition": "stamina+0.5",
+		"x": -128,
+		"y": -32,
+		"root": false
+	},
+	"-4_1": {
+		"definition": "mining_speed+3%",
+		"x": -128,
+		"y": 32,
+		"root": false
+	},
+	"-4_10": {
+		"definition": "mining_speed+3%",
+		"x": -128,
+		"y": 320,
+		"root": false
+	},
+	"-3_-8": {
+		"definition": "mining_speed+3%",
+		"x": -96,
+		"y": -256,
+		"root": false
+	},
+	"-3_8": {
+		"definition": "stamina+0.5",
+		"x": -96,
+		"y": 256,
+		"root": false
+	},
+	"-2_-11": {
+		"definition": "jump+5%",
+		"x": -64,
+		"y": -352,
+		"root": false
+	},
+	"-2_-6": {
+		"definition": "stamina+0.5",
+		"x": -64,
+		"y": -192,
+		"root": false
+	},
+	"-2_0": {
+		"definition": "stamina+5%",
+		"x": -64,
+		"y": 0,
+		"root": false
+	},
+	"-2_6": {
+		"definition": "stamina+5%",
+		"x": -64,
+		"y": 192,
+		"root": false
+	},
+	"-2_11": {
+		"definition": "movement_speed+5%",
+		"x": -64,
+		"y": 352,
+		"root": false
+	},
+	"-1_-13": {
+		"definition": "stamina+0.5",
+		"x": -32,
+		"y": -416,
+		"root": false
+	},
+	"-1_-9": {
+		"definition": "movement_speed+5%",
+		"x": -32,
+		"y": -288,
+		"root": false
+	},
+	"-1_-4": {
+		"definition": "mining_speed+3%",
+		"x": -32,
+		"y": -128,
+		"root": false
+	},
+	"-1_4": {
+		"definition": "stamina+0.5",
+		"x": -32,
+		"y": 128,
+		"root": false
+	},
+	"-1_9": {
+		"definition": "jump+5%",
+		"x": -32,
+		"y": 288,
+		"root": false
+	},
+	"-1_13": {
+		"definition": "fortune+0.1",
+		"x": -32,
+		"y": 416,
+		"root": false
+	},
+	"0_-2": {
+		"definition": "movement_speed+5%",
+		"x": 0,
+		"y": -64,
+		"root": false
+	},
+	"0_0": {
+		"definition": "mining_speed+3%",
+		"x": 0,
+		"y": 0,
+		"root": true
+	},
+	"0_2": {
+		"definition": "jump+5%",
+		"x": 0,
+		"y": 64,
+		"root": false
+	},
+	"1_-13": {
+		"definition": "fortune+0.1",
+		"x": 32,
+		"y": -416,
+		"root": false
+	},
+	"1_-9": {
+		"definition": "jump+5%",
+		"x": 32,
+		"y": -288,
+		"root": false
+	},
+	"1_-4": {
+		"definition": "stamina+0.5",
+		"x": 32,
+		"y": -128,
+		"root": false
+	},
+	"1_4": {
+		"definition": "mining_speed+3%",
+		"x": 32,
+		"y": 128,
+		"root": false
+	},
+	"1_9": {
+		"definition": "movement_speed+5%",
+		"x": 32,
+		"y": 288,
+		"root": false
+	},
+	"1_13": {
+		"definition": "stamina+0.5",
+		"x": 32,
+		"y": 416,
+		"root": false
+	},
+	"2_-11": {
+		"definition": "movement_speed+5%",
+		"x": 64,
+		"y": -352,
+		"root": false
+	},
+	"2_-6": {
+		"definition": "stamina+5%",
+		"x": 64,
+		"y": -192,
+		"root": false
+	},
+	"2_0": {
+		"definition": "stamina+0.5",
+		"x": 64,
+		"y": 0,
+		"root": false
+	},
+	"2_6": {
+		"definition": "stamina+0.5",
+		"x": 64,
+		"y": 192,
+		"root": false
+	},
+	"2_11": {
+		"definition": "jump+5%",
+		"x": 64,
+		"y": 352,
+		"root": false
+	},
+	"3_-8": {
+		"definition": "stamina+0.5",
+		"x": 96,
+		"y": -256,
+		"root": false
+	},
+	"3_8": {
+		"definition": "mining_speed+3%",
+		"x": 96,
+		"y": 256,
+		"root": false
+	},
+	"4_-10": {
+		"definition": "mining_speed+3%",
+		"x": 128,
+		"y": -320,
+		"root": false
+	},
+	"4_-1": {
+		"definition": "mining_speed+3%",
+		"x": 128,
+		"y": -32,
+		"root": false
+	},
+	"4_1": {
+		"definition": "mining_speed+3%",
+		"x": 128,
+		"y": 32,
+		"root": false
+	},
+	"4_10": {
+		"definition": "mining_speed+3%",
+		"x": 128,
+		"y": 320,
+		"root": false
+	},
+	"5_-7": {
+		"definition": "movement_speed+5%",
+		"x": 160,
+		"y": -224,
+		"root": false
+	},
+	"5_7": {
+		"definition": "jump+5%",
+		"x": 160,
+		"y": 224,
+		"root": false
+	},
+	"6_-9": {
+		"definition": "jump+5%",
+		"x": 192,
+		"y": -288,
+		"root": false
+	},
+	"6_-2": {
+		"definition": "stamina+0.5",
+		"x": 192,
+		"y": -64,
+		"root": false
+	},
+	"6_2": {
+		"definition": "stamina+5%",
+		"x": 192,
+		"y": 64,
+		"root": false
+	},
+	"6_9": {
+		"definition": "movement_speed+5%",
+		"x": 192,
+		"y": 288,
+		"root": false
+	},
+	"7_-5": {
+		"definition": "jump+5%",
+		"x": 224,
+		"y": -160,
+		"root": false
+	},
+	"7_5": {
+		"definition": "movement_speed+5%",
+		"x": 224,
+		"y": 160,
+		"root": false
+	},
+	"8_-10": {
+		"definition": "stamina+0.5",
+		"x": 256,
+		"y": -320,
+		"root": false
+	},
+	"8_-3": {
+		"definition": "mining_speed+3%",
+		"x": 256,
+		"y": -96,
+		"root": false
+	},
+	"8_3": {
+		"definition": "stamina+0.5",
+		"x": 256,
+		"y": 96,
+		"root": false
+	},
+	"8_10": {
+		"definition": "fortune+0.1",
+		"x": 256,
+		"y": 320,
+		"root": false
+	},
+	"9_-6": {
+		"definition": "movement_speed+5%",
+		"x": 288,
+		"y": -192,
+		"root": false
+	},
+	"9_-1": {
+		"definition": "movement_speed+5%",
+		"x": 288,
+		"y": -32,
+		"root": false
+	},
+	"9_1": {
+		"definition": "jump+5%",
+		"x": 288,
+		"y": 32,
+		"root": false
+	},
+	"9_6": {
+		"definition": "jump+5%",
+		"x": 288,
+		"y": 192,
+		"root": false
+	},
+	"10_-8": {
+		"definition": "fortune+0.1",
+		"x": 320,
+		"y": -256,
+		"root": false
+	},
+	"10_-4": {
+		"definition": "mining_speed+3%",
+		"x": 320,
+		"y": -128,
+		"root": false
+	},
+	"10_4": {
+		"definition": "mining_speed+3%",
+		"x": 320,
+		"y": 128,
+		"root": false
+	},
+	"10_8": {
+		"definition": "stamina+0.5",
+		"x": 320,
+		"y": 256,
+		"root": false
+	},
+	"11_-2": {
+		"definition": "jump+5%",
+		"x": 352,
+		"y": -64,
+		"root": false
+	},
+	"11_2": {
+		"definition": "movement_speed+5%",
+		"x": 352,
+		"y": 64,
+		"root": false
+	},
+	"13_-1": {
+		"definition": "stamina+5%",
+		"x": 416,
+		"y": -32,
+		"root": false
+	},
+	"13_1": {
+		"definition": "fortune+0.1",
+		"x": 416,
+		"y": 32,
+		"root": false
+	},
+	"fxq5n82foax6yhug": {
+		"definition": "jump+5%",
+		"x": -288,
+		"y": -32,
+		"root": false
+	}
+}

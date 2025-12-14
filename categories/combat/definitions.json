@@ -1,0 +1,597 @@
+{
+	"begin_health1_att1_armor1": {
+		"title": "+2 生命值 +5% 基础伤害 +1 护甲值",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:begin_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.max_health",
+					"value": 2,
+					"operation": "addition"
+				}
+			},
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.armor",
+					"value": 1,
+					"operation": "addition"
+				}
+			},
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:basi_att",
+					"value": 0.1,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "9y8gg9s3g4c0kkjw"
+		}
+	},
+	"att1": {
+		"title": "+10% 基础伤害",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:strength"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:basi_att",
+					"value": 0.1,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "4pjspi39yfok3hyc"
+		}
+	},
+	"health1": {
+		"title": "+2.5生命值",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:health_boost"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.max_health",
+					"value": 5,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "78f78rsk4kjdc1r4"
+		}
+	},
+	"armor1": {
+		"title": "+1.5护甲",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:resistance"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.armor",
+					"value": 1.5,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "78f78rsk4kjdc1r4"
+		}
+	},
+	"heal1": {
+		"title": "+15%受治疗加成 ",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:heal4_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "puffish_skills:player.healing",
+					"value": 0.15,
+					"operation": "multiply_base"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "e70rcoqpekemc5xh"
+		}
+	},
+	"att2": {
+		"title": "+15% 基础伤害",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:strength"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:basi_att",
+					"value": 0.15,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "4pjspi39yfok3hyc"
+		}
+	},
+	"health2": {
+		"title": "+4生命值",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:health_boost"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.max_health",
+					"value": 8,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "78f78rsk4kjdc1r4"
+		}
+	},
+	"armor2": {
+		"title": "+2护甲",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:resistance"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.armor",
+					"value": 2,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "78f78rsk4kjdc1r4"
+		}
+	},
+	"heal2": {
+		"title": "+25%受治疗加成 ",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:heal4_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "puffish_skills:player.healing",
+					"value": 0.25,
+					"operation": "multiply_base"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "e70rcoqpekemc5xh"
+		}
+	},
+	"att3": {
+		"title": "+25% 基础伤害",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:strength"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:basi_att",
+					"value": 0.25,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "4pjspi39yfok3hyc"
+		}
+	},
+	"health3": {
+		"title": "+6生命值",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:health_boost"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.max_health",
+					"value": 12,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "78f78rsk4kjdc1r4"
+		}
+	},
+	"armor3": {
+		"title": "+3护甲",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "minecraft:resistance"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "generic.armor",
+					"value": 3,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "mj7hpmvf6m5g9tuv"
+		}
+	},
+	"crit1": {
+		"title": "+2.5%暴击率",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:crit4_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:crit_rate",
+					"value": 0.025,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "j1asldzoww2qvoc9"
+		}
+	},
+	"critatt1": {
+		"title": "+5%暴击伤害",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:critatt4_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "l2damagetracker:crit_damage",
+					"value": 0.05,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "e70rcoqpekemc5xh"
+		}
+	},
+	"mana1": {
+		"title": "+15法力值 ",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:mana4_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "irons_spellbooks:max_mana",
+					"value": 15,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "e70rcoqpekemc5xh"
+		}
+	},
+	"spellTime": {
+		"title": "+7.5% 吟唱缩减 ",
+		"icon": {
+			"type": "item",
+			"data": {
+				"item": "irons_spellbooks:shriving_stone"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "irons_spellbooks:cast_time_reduction",
+					"value": 0.075,
+					"operation": "multiply_base"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "h76zudccbbq1szmp"
+		}
+	},
+	"spellColl": {
+		"title": "+5% 冷却缩减",
+		"icon": {
+			"type": "item",
+			"data": {
+				"item": "irons_spellbooks:cooldown_upgrade_orb"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "irons_spellbooks:cooldown_reduction",
+					"value": 0.05,
+					"operation": "multiply_base"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "1pyj75wujd2uo45r"
+		}
+	},
+	"cost": {
+		"title": "+1武器能力负荷",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:magic_add_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:cost",
+					"value": 1,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"toughness": {
+		"title": "+2韧性",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:toughness"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "integration_package_core:player_max_toughness",
+					"value": 2,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"dan6": {
+		"title": "段位",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:ender"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:max_dan",
+					"value": 99999,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"dan5": {
+		"title": "段位",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:ender"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:max_dan",
+					"value": 7000,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"dan4": {
+		"title": "段位",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:ender"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:max_dan",
+					"value": 2000,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"dan3": {
+		"title": "+段位",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:fire"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:max_dan",
+					"value": 1500,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"dan2": {
+		"title": "+段位",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:ice"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:max_dan",
+					"value": 1000,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"dan1": {
+		"title": "段位",
+		"frame": "challenge",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:ender"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:max_dan",
+					"value": 500,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "ehfkyvze4g44u6hb"
+		}
+	},
+	"recation_add": {
+		"title": "+10魔法精通",
+		"icon": {
+			"type": "effect",
+			"data": {
+				"effect": "kubejs:recation_add_icon"
+			}
+		},
+		"rewards": [
+			{
+				"type": "puffish_skills:attribute",
+				"data": {
+					"attribute": "kubejs:reaction_add",
+					"value": 10,
+					"operation": "addition"
+				}
+			}
+		],
+		"metadata": {
+			"icon": "3emlfb4345qh28nwvlj"
+		}
+	}
+}

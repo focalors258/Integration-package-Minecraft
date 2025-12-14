@@ -1,0 +1,22 @@
+{
+	"unlocked_by_default": true,
+	"exclusive_root": true,
+	"title": "神圣法术技能",
+	"icon": {
+		"type": "effect",
+		"data": {
+			"effect": "kubejs:divine"
+		}
+	},
+	"background": {
+"texture":"kubejs:gui/skill_tree_background.png",
+
+"width": 2048,
+		"height": 2048,
+		"position": "fill"
+
+
+
+
+}
+}
