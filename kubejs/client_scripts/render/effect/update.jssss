@@ -1,0 +1,127 @@
+
+
+//弃用
+NetworkEvents.dataReceived('nbt', event => {//低频nbt更新
+    
+   // return
+    if(false){}
+    //客户端只会同步部分nbt
+    let value = event.data.get('value')//注意 获取的是对象 不能用string         数值  注意获取类型
+    //Compound无效
+    let name = event.data.getString('name')//项目名称
+
+    let id = event.data.getInt('entity')//实体id//
+
+ //
+ 
+
+   /**@type {Internal.LivingEntity} */
+   let entity = Client.player.level.getEntity(id)//getUuidEntity(uuid)//000//global.entity[uuid]
+
+   
+
+//  
+
+
+    if (entity && !entity.isPlayer()) {
+
+        let nbt = entity.getNbt()
+
+        //entity.removeEffect("kubejs:absorption")
+        // entity.removeAllEffects()//效果nbt被删除无法更新实体当前效果  只能在nbt更新前使用该方法 
+        if (nbt['ActiveEffects']) {//删除所有效果方法无效  使用遍历在更新前进行删除
+
+            nbt['ActiveEffects'].forEach(effect => {
+
+                entity.removeEffect(effect['forge:id'])
+                //
+            })
+        }
+
+        if (name == 'update') {
+
+            nbt['ActiveEffects'] = value
+
+            entity.setNbt(nbt)
+
+
+        } else if (name == 'remove') {
+
+
+        }
+
+        //  Client.player.tell('->'+entity.getEffect("kubejs:absorption"))    
+
+        //effect['forge:id']
+        //Client.player.tell()
+        //Client.player.tell(nbt['ActiveEffects'])
+        // entity.addEffect(new potion('kubejs:absorption', 200, 40, false, false))
+        //else if (name == 'remove') {}
+        //console.log('----------------------------')
+        // console.log(String(nbt['ActiveEffects']))
+        //nbt['ActiveEffects'] = undefined
+        // console.log(String( entity.getNbt()['ActiveEffects']))
+        //entity.removeAllEffects()
+        // entity.removeEffect(entity.getEffect('alexsmobs:sunbird_blessing').getEffect())
+
+        // console.log('-----------------------------')
+        //  console.log('------------------------------')
+        // console.log(String(nbt['ActiveEffects']))
+        // nbt['ActiveEffects'] = undefined
+        //console.log(String(nbt['ActiveEffects']))
+        //  console.log('------------------------------')
+        //entity.setNbt(nbt)
+        // JSON.parse(value)
+        //console.log(value)
+        // 
+        //let a={}
+        // ( entity.nbt.get()['ActiveEffects'])
+
+
+
+        // console.log(String(nbt['ActiveEffects']))
+
+
+
+        //forEach(effect=>{  })
+        //entity.removeEffect('kubejs:absorption')
+
+        //effect['forge:id']
+
+        //[{Ambient:0b,Amplifier:10b,CurativeItems:[{Count:1b,id:"minecraft:milk_bucket"}],Duration:0,Id:11,ShowIcon:0b,ShowParticles:0b,"forge:id":"minecraft:resistance"}]
+
+
+        //console.log(effect.getEffect().getDuration())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //a=eval(value)
+
+        //entity.nbt
+
+
+
+        //   let nbt = entity.getNbt()
+
+        // nbt['AbsorptionAmount'] = value
+
+        //entity.setNbt(value)
+
+        //
+
+    }
+
+
+})

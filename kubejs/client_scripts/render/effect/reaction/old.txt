@@ -1,0 +1,21 @@
+   event.poseStack.pushPose()
+
+        e.transformerCamera(e.poseStack, e.camera)
+        // $RenderSystem.depthMask(false);
+
+        //  $RenderSystem.disableDepthTest();
+
+
+        event.translate(a.pos[0], a.pos[1], a.pos[2])
+        e.poseStack.mulPose(Client.entityRenderDispatcher.cameraOrientation())
+        event.translate(0, 0, -0.5 * scale - 0.5)
+        e.rotationDegreesZ(180)//旋转角度
+        event.poseStack.scale(scale * a.scale / 50, scale * a.scale / 50, 0)
+        event.poseStack.pushPose()
+     //   event.translate(0, a.y+scale-5, 0)
+        event.drawString(a.title, -0.5 * Client.font.width(String(a.title)), 0, a.rgba)
+        //$RenderSystem.enableDepthTest();
+        event.poseStack.popPose()
+        //event.drawString('a.ti4563tle', 0, 0, 255,255,244,255)
+
+        event.poseStack.popPose()

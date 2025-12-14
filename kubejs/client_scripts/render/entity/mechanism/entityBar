@@ -1,0 +1,697 @@
+
+
+
+
+
+let entityBar = (event, entity, GuiGraphic) => {
+
+    if (!entity.isLiving()) return
+
+    let e = event
+
+    let player = Client.player
+    //  if (e.stage != RenderJSLevelRenderStage.AFTER_PARTICLES) return//渲染类型AFTER_PARTICLES
+
+    //AFTER_SOLID_BLOCKS 可以改图层距离 但会有偏移  且会被字符串遮挡 不透明
+
+    //渲染类型AFTER_PARTICLES  不会被遮挡
+
+    //渲染字符串时会导致图片按先后顺序渲染
+
+    //           Client.player.tell(entity.name)   
+    //           Client.player.tell(entity.getHealth() )    
+    //Client.player.tell(oldHealth+'             '  +health)
+    //Client.player.tell(getData(entity, 'int', 'entityBar_stop'))
+    // e.transformerCamera(e.poseStack, e.camera)//将对象传入new  direction(1,1,1,1(new  direction(1,1,1,1))
+    //e.poseStack.translate(pos.x(), pos.y() + 0.5, pos.z())
+
+    // e.poseStack.translate(entity.nbt['Pos'][0], entity.nbt['Pos'][1] + entity.eyeHeight + 1, entity.nbt['Pos'][2])//渲染在世界时为绝对坐标  渲染在实体时为相对坐标
+    //   let nbt = entity.getNbt()
+    //   nbt['AbsorptionAmount'] = 0
+    //   entity.setNbt(nbt)
+
+
+    /**@type {Internal.Entity}*/
+    let entity1 = entity
+
+    if (entity.isLiving() && player.distanceToEntity(entity) < 32 && !entity.isPlayer() && !areData(entity, 'boss')) {
+
+        event.poseStack.pushPose()//创建新的
+
+
+
+        let pos = entity.getEyePosition(0.01)
+
+
+
+        e.poseStack.translate(0, entity1.getBoundingBox().maxY - entity.y + 1, 0)
+
+        e.poseStack.mulPose(Client.entityRenderDispatcher.cameraOrientation()) //方向(new Vec3f(0,1,0)).rotation(180))
+
+        e.poseStack.mulPose(RotationAxis.ZP.deg(180))
+
+        e.poseStack.scale(0.02, 0.02, 0.02)//大小
+        // e.rotationDegreesZ(180)//旋转角度
+        let health = Math.min(1, entity.getHealth() / entity.getMaxHealth())
+
+        if ((areData(entity, 'entity') || areData(entity, 'elite'))) {
+            let isRender = player.distanceToEntity(entity) < 24 && health > 0
+
+
+            let list = entityBarData(player, entity, entity.stringUuid, isRender)
+
+            let oldHealth = list[0]
+
+            let oldShield = list[1]
+
+            let move = list[2]
+
+
+            let shield = 0
+
+            if (entity.nbt && typeof entity.nbt['AbsorptionAmount'] == 'number') {//初始化护盾
+
+                shield = Math.min(1, entity.nbt['AbsorptionAmount'] / entity.getMaxHealth())
+
+            }
+
+            //Client.player.tell(list[2])
+
+
+            if (health <= 1) {//满血不显示
+
+                if (areData(entity, 'entity')) {//血条
+
+                    // if (level) event.drawString('Lv.' + level, -65, 0, 255, 255, 255, 255)
+
+                    entityBarRender(event, oldHealth, health, oldShield, shield, entity, 'entity', entity.stringUuid, player, GuiGraphic, isRender, move)
+
+
+
+                } else if (areData(entity, 'elite')) {
+
+                    //  if (level) event.drawString('Lv.' + level, -87, 0, 255, 255, 255, 255)//有可能会遮挡
+
+                    entityBarRender(event, oldHealth, health, oldShield, shield, entity, 'elite', entity.stringUuid, player, GuiGraphic, isRender, move)
+
+
+                }
+            }
+        }
+
+
+        findSnow(event, entity, health, player, GuiGraphic)
+
+        event.poseStack.popPose()//清空
+
+    }
+
+
+
+
+
+
+
+}
+
+
+
+let entityBarRender = (event, oldHealth, health, oldShield, shield, entity, type, index, player, GuiGraphic, isRender, move) => {
+
+    let e = event
+
+    let length = 0
+
+    let pos = 0
+
+    if (type == 'entity') {
+
+
+        length = 68
+
+
+    } else if (type == 'elite') {
+        pos = 81
+
+        length = 114
+    }
+
+    //Client.player.tell(isRender)
+    if (isRender) {//渲染条件event.guiGraphics.drawString(Client.font,'Lv.' + (level + 1), -length, 0, 255, 255, 55, 55)
+
+        let level = getData(entity, 'int', 'level')//levelList[entity.stringUuid]//entity.nbt['ForgeData']
+
+
+
+        level = level ? level : 0
+
+        if (level) {
+
+            GuiGraphic["drawString(net.minecraft.client.gui.Font,java.lang.String,float,float,int,boolean)"](
+                Client.font,
+                'Lv.' + (level),
+                -length,
+                0,
+                getColor(200, 200, 200, 255),
+                false)
+        }
+        //event.drawString('Lv.' + (level + 1), -length, 0, 255, 255, 255, 255)//有可能会遮挡  等级
+
+
+    }
+    //entityBar_move[index] = Math.max(0, entityBar_move[index] - 1)
+
+
+    //RenderSystem.enableBlend()
+
+
+
+
+    //Client.player.tell(move)
+
+    event.poseStack.pushPose()
+    e.poseStack.scale(move / 40, 1, 1)
+
+
+    e.poseStack.translate(-(length - 1) / 2 / entityBar_move[index], 1, -0.01)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标(x横 y竖 z图层)
+
+    oldHealth = oldHealth == 0 ? 0.0001 : oldHealth
+    health = health == 0 ? 0.0001 : health
+
+    oldHealth = Math.min(oldHealth, 1)
+
+    health = Math.min(health, 1)
+
+    GuiGraphic.blit('kubejs:gui/bossbar.png', -(length + 2) / 2, 0, pos, 208, length + 4, 5, 256, 256)//框
+
+    GuiGraphic.blit('kubejs:gui/bossbar.png', -(length - 2) / 2, 1, pos + 2, 229, length, 3, 256, 256)//底
+
+    if (oldHealth >= health) {
+
+        //Client.player.tell(entityBar_stop[index])
+
+        event.poseStack.pushPose()
+        e.poseStack.scale((oldHealth), 1, 1)
+        e.poseStack.translate(-(length - 2) * 0.5 / oldHealth, 1, -0.01)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标(x横 y竖 z图层)
+        GuiGraphic.blit('kubejs:gui/bossbar.png', 0, 0, pos + 2, 214, length, 3, 256, 256)//灰
+        event.poseStack.popPose()//清空
+
+
+        //盾红
+        event.poseStack.pushPose()
+
+        GuiGraphic.blit('kubejs:gui/bossbar.png', - (length + 2) / 2, 0, pos, 198, oldShield * (length + 4), 5, 256, 256)//
+        event.poseStack.popPose()//清空
+
+        //盾
+        event.poseStack.pushPose()
+        e.poseStack.translate(0, 0, -0.01)
+        GuiGraphic.blit('kubejs:gui/bossbar.png', -(length + 2) / 2, 0, pos, 203, shield * (length + 4), 5, 256, 256)
+        event.poseStack.popPose()//清空
+
+        //Client.player.tell(getData(entity,'entityBar_stop'))getData(entity, 'int', 'entityBar_stop') 
+
+        event.poseStack.pushPose()
+        e.poseStack.scale((health), 1, 1)
+        e.poseStack.translate(-(length - 2) * 0.5 / health, 1, -0.02)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标
+
+        GuiGraphic.blit('kubejs:gui/bossbar.png', 0, 0, pos + 2, 224, length, 3, 256, 256)//粉
+
+        if (entityBar_stop[index] > 0) {
+
+            //GuiGraphic.fill(0, 0, length, 3, 255, 255, 255, entityBar_stop[index] * 4)
+            //  event.blit('kubejs:gui/bossbar.png', 0, 0, pos + 2, 234, length, 3)//红Color.rgba(255, 255, 255, 120 * entityBar_stop[index] / 20).getRgbJS()
+        } else { }
+
+        //event.poseStack.pushPose()RenderJSUtils.rgbaColor(255, 255, 255, 120 * entityBar_stop[index] / 20)
+        //e.poseStack.scale((health), 1, 1)
+        //e.poseStack.translate(-(length - 1) * 0.5 / health, 1, -0.02)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标
+
+        // event.poseStack.popPose()//清空
+
+
+
+
+        event.poseStack.popPose()//清空
+    } else {
+
+        //  event.blit('kubejs:gui/bossbar.png', -(length + 2) / 2, 0, pos, 208, length + 4, 5)//框
+        //
+        //
+        //  e.blit('kubejs:gui/bossbar.png', -(length - 2) / 2, 1, pos + 2, 229, length, 3)//底
+
+
+
+
+        // event.poseStack.popPose()//清空
+
+
+        event.poseStack.pushPose()
+        e.poseStack.scale((health), 1, 1)
+        e.poseStack.translate(-(length - 2) * 0.5 / health, 1, -0.02)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标
+        GuiGraphic.blit('kubejs:gui/bossbar.png', 0, 0, pos + 2, 219, length, 3, 256, 256)//绿
+        event.poseStack.popPose()//清空
+
+        event.poseStack.pushPose()
+        e.poseStack.scale((oldHealth), 1, 1)
+        e.poseStack.translate(-(length - 2) * 0.5 / oldHealth, 1, -0.02)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标(x横 y竖 z图层)
+
+        GuiGraphic.blit('kubejs:gui/bossbar.png', 0, 0, pos + 2, 224, length, 3, 256, 256)//红
+
+
+        if (entityBar_stop[index] > 0) {
+
+
+            //  GuiGraphic.fill(0, 0, length, 3, 255, 255, 255, entityBar_stop[index] * 4)
+            // event.blit('kubejs:gui/bossbar.png', 0, 0, pos + 2, 234, length, 3)//粉
+            // event.poseStack.popPose()//清空RenderJSGUI.rgbaColor(255, 255, 255, 120 * entityBar_stop[index] / 20)
+        } else { }//Color.rgba(255, 255, 255, 120 * entityBar_stop[index] / 20).getRgbJS()
+        // event.poseStack.pushPose()Color.rgba(255, 255, 255, 120 * entityBar_stop[index] / 20).getRgbJS()
+        // e.poseStack.scale((oldHealth), 1, 1)
+        // e.poseStack.translate(-(length - 2) * 0.5 / oldHealth, 1, -0.01)//渲染在世界时为绝对坐标  渲染在实体时为相对坐标(x横 y竖 z图层)
+
+        event.poseStack.popPose()//清空
+        //Client.player.tell(getData(entity,'entityBar_stop'))getData(entity, 'int', 'entityBar_stop')
+
+    }
+
+    event.poseStack.popPose()
+
+
+}
+
+
+
+let entityBar_move = {}
+
+let entityBar_move_old = {}
+
+let entityBar_vary = {}//变化条
+
+let entityBar_stop = {}
+
+let entityBar_speed = {}//变化速度
+
+
+let entityBar_shieldVary = {}//护盾变化速度
+
+let entityBar_shieldSpeed = {}//护盾变化速度
+
+let entityBar_vary_old = {}//旧变化条
+
+let entityBar_shieldVary_old = {}//旧变化条
+
+
+
+
+
+//let a = {}
+
+let DPFBuffer = 1
+
+
+let entityBarData = (player, entity, index, isRender) => {
+
+    let presentHealth = entity.getHealth()
+
+    let maxHealth = entity.getMaxHealth()
+
+
+    //  time ? time : 0
+
+    if (!(typeof entityBar_stop[index] === 'number') ||
+        !(typeof entityBar_vary[index] === 'number') ||
+        !(typeof entityBar_shieldVary[index] === 'number') ||
+        !(typeof entityBar_vary_old[index] === 'number') ||
+        !(typeof entityBar_move[index] === 'number')
+    ) {//初始化
+        entityBar_stop[index] = 0
+        entityBar_vary[index] = 1
+
+        entityBar_shieldVary[index] = 0
+
+        entityBar_vary_old[index] = entityBar_vary[index]
+
+        entityBar_shieldVary_old[index] = 0
+        entityBar_move_old[index] = 0
+        entityBar_move[index] = 0
+        // Client.player.tell(time)
+    }
+    let varyShield = Math.min(1, entityBar_shieldVary[index])
+
+
+
+    let varyHealth = entityBar_vary[index]//player.getRootData().getDouble('bossBar' + index + '_vary')//1//
+
+    let health = presentHealth / maxHealth
+
+    let time = entityBar_stop[index]//entity.getRootData().getInt('entityBar_stop')
+
+
+    //  entityBar_vary_old[index]-entityBar_speed[index]
+
+    //Client.player.tell(Mth.lerp(Client.level.time % 20 / 20, varyHealthhealth ,))
+
+    //Client.player.tell(entityBar_vary_old[index]+'    '+varyHealth+'   '+Client.level.time%20/20)
+
+
+
+    //Client.player.tell(entityBar_move[index] )
+    //Client.player.tell(a[56767]) entityBar_vary_old[index] -
+    //Client.player.tell(entityRenderTick   )
+
+
+    //Client.player.tell(entityRenderTick % Math.floor(5)+'   '+entityRenderTick)
+
+
+
+    if (spaceTick) {//补帧
+
+        //  if (!a[index]) a[index] = 0
+        //
+        //  a[index]++
+
+
+        //Client.player.tell( $Mth.lerp(partialTick, entityBar_move_old[index], entityBar_move[index] ))
+        // Client.player.tell(varyHealth + '   ' + oldvaryHealth[index] + '   ' + middleFps / (10 / DPF))
+
+        return [$Mth.lerp(partialTick, entityBar_vary_old[index], varyHealth),
+        $Mth.lerp(partialTick, entityBar_shieldVary_old[index], varyShield),
+        $Mth.lerp(partialTick, entityBar_move_old[index], entityBar_move[index])
+        ]
+
+
+        //return [Mth.lerp(Client.level.time % 20 / 20, entityBar_vary_old[index], (varyHealth - DPFBuffer * 0.15 * entityBar_speed[index])), varyShield]
+    } else {
+        //entityBar_vary_old[index] = varyHealth
+        //entityBar_shieldVary_old[index] = varyShield
+        //a[index] = 0
+
+        entityBar_vary_old[index] = varyHealth
+
+        entityBar_shieldVary_old[index] = varyShield
+
+        entityBar_move_old[index] = entityBar_move[index]
+
+
+        if (isRender) {
+            entityBar_move[index] = Math.min(40, entityBar_move[index] + 8 * DPF)
+        } else {
+            entityBar_move[index] = Math.max(0, entityBar_move[index] - 8 * DPF)
+        }
+
+        entityBar_stop[index] = Math.max(time - 10 * DPF, 0)
+    }
+    // Client.player.tell(1)
+
+
+    let shield = 0
+
+    if (entity.nbt && typeof entity.nbt['AbsorptionAmount'] == 'number') {//初始化护盾
+        //   let nbt = entity.getNbt()
+        //   nbt['AbsorptionAmount'] = 0
+        //   entity.setNbt(nbt)
+        shield = Math.min(1, entity.nbt['AbsorptionAmount'] / entity.getMaxHealth())
+
+    }
+    //  Client.player.tell(entity.nbt['AbsorptionAmount'])
+
+
+
+
+
+    let list = [
+        entityBarData2(varyHealth, health, index, time, 'health'),
+        entityBarData2(varyShield, shield, index, time, 'shield'),//注意无需除以最大值
+        entityBar_move_old[index]
+    ]
+
+    //存实体身上  减少冷却值entity.getRootData().putInt('entityBar_stop',
+
+    //
+
+    return list
+
+
+}
+
+
+
+
+
+
+let entityBarData2 = (vary, present, index, time, type) => {
+
+    let speed
+
+    let storeVary
+
+    const BASE = DPF
+
+    DPFBuffer = DPF
+
+    if (type == 'health') {
+        storeVary = entityBar_vary
+        speed = entityBar_speed
+    } else {
+        storeVary = entityBar_shieldVary
+        speed = entityBar_shieldSpeed
+
+    }
+
+    if (!(speed[index]) && speed[index] != 0) {//初始化
+        speed[index] = 0
+    }
+    
+    
+    
+    if (vary - present == 0.00) {//当变化条少于生命条+0.00时  使两值相等  并重置bossbar1(变化条速度)
+
+
+
+        speed[index] = 0
+    } else if (present < vary) {//当变化条大于生命条足够多时 !entityBar_speed[index] |
+
+        if ((vary - present) > speed[index]) {
+
+            speed[index] = Math.min(vary - present, 0.3)//速度
+        }
+
+        if (time <= 0) {
+
+            storeVary[index] -= Math.min(BASE * 0.4 * speed[index], +vary - present)
+
+        }
+    } else if (present > vary) {
+
+        if ((present - vary) > speed[index]) {
+
+
+            speed[index] = Math.min(present - vary, 0.4)
+        }
+        if (type == 'health') {
+            storeVary[index] += Math.min(BASE * 0.4 * speed[index], (present - vary))
+        } else {
+
+            storeVary[index] = present
+        }
+
+    }
+
+    return vary
+
+}
+
+
+
+
+
+
+NetworkEvents.dataReceived('entity_bar', event => {
+
+   // new animation('dfgrtgs',100)
+    
+    
+   // tell(35345)
+
+if(true){
+    let value //= event.data.getDouble('value')//数值  注意获取类型
+
+    let name = event.data.getString('name')//项目名称
+
+    let id = event.data.getInt('entity')//实体id 区分uuid
+
+    //let player = event.player
+
+    //  let entitys = event.level.entities
+
+
+    let entity = event.level.getEntity(id)//getUuidEntity(uuid)
+
+    if (entity) {
+        //Client.player.tell()
+
+
+        if (name == 'entityBar_stop') {
+            //
+            entityBar_stop[entity.stringUuid] = 20
+
+        } else if (name == 'elite') {
+
+            entity.getRootData().putBoolean('elite', true)
+
+        } else if (name == 'entity') {
+
+            entity.getRootData().putBoolean('entity', true)
+
+        } else if (name == 'find_bar') {//发现值在此传入
+
+
+            entity.getRootData().putInt('find', event.data.getInt('find'))
+
+
+
+        }
+
+    } else if (name == 'sound' && find_sound == 0) {//发现音效
+
+
+        event.player.playSound('kubejs:2077_found', 40, 1)
+
+        find_sound = 400
+
+    }
+
+}
+
+})
+//entity.getRootData().putInt('entityBar_stop', 20)
+//  else if (name == 'move') {
+//      //
+//      entity.getRootData().putInt('entityBar_move', 0)
+//  entity.getRootData().putInt('max_find', event.data.getInt('max_find'))
+//Client.player.tell('cnm'+event.data.getInt('max_find'))
+//  }
+// Client.player.tell(getData(player, 'int', 'find_sound'))
+//Client.player.tell(time)
+// Client.player.tell(time)
+//setData(player, 'int', 'find_sound', 600)
+//  if (areData(player, 'bossBar' + index + '_uuid')) {
+
+//      if (getData(player, 'string', 'bossBar' + index + '_uuid') !== entity.stringUuid) {//当boss缓存与当前boss不相等时  更新变化条
+//          //console.log('有id缓存且不相同')
+//          oldHealth = presentHealth / maxHealth //注意  此处已修改1//
+
+//          //setData(player, 'string', 'bossBar' + index + '_uuid', entity.stringUuid)
+
+//          player.getRootData().putDouble('bossBar' + index + '_vary', oldHealth)//设置变化条
+//      } else {
+//          //console.log('有id缓存且相同')
+//          oldHealth = player.getRootData().getDouble('bossBar' + index + '_vary')
+//      }
+
+//  } else {//添加bossid缓存
+//      //console.log('无id缓存')
+//      oldHealth = presentHealth / maxHealth
+
+//      //setData(player, 'string', 'bossBar' + index + '_uuid', entity.stringUuid)
+
+//      player.getRootData().putDouble('bossBar' + index + '_vary', oldHealth)//设置变化条
+//  }
+
+//console.log(oldHealth)
+//console.log(entity.name)
+//  if (oldHealth - health == 0.00) {//当变化条少于生命条+0.00时  使两值相等  并重置bossbar1(变化条速度)
+//
+//      if (entityBar_speed[index]) {//player.getRootData().contains('bossBar' + index + '_speed')
+//         entityBar_speed[index] = 0//player.getRootData().remove('bossBar' + index + '_speed') player.getRootData().getDouble('bossBar' + index + '_speed')
+//      }
+//      console.log(1)
+////  } else if (health < oldHealth) {//当变化条大于生命条足够多时
+//
+//      if (!entityBar_speed[index] || (oldHealth - health) > entityBar_speed[index]) {
+
+//         entityBar_speed[index] = Math.min(oldHealth - health, 0.3)//速度
+// player.getRootData().putDouble('bossBar' + index + '_speed', )//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+//      }
+//      console.log(2)
+//      //bossbar  变化条  bossbar1 速度  bossbar2减缓时间
+//      if ( time <= 0) {
+//            oldHealth -= Math.min(0.01 * entityBar_speed[index], oldHealth - health)
+//      }
+//      //Client.player.tell(entityBar_speed[index])entity.getRootData().contains('entityBar_stop') &&
+//
+//      //entity.getRootData().putInt('entityBar_stop', Math.max(time - 1, 0))
+//
+//      entityBar_vary[index] = oldHealth
+//
+//      // player.getRootData().putDouble('bossBar' + index + '_vary', oldHealth)//设置变化条player.getRootData().getDouble('bossBar' + index + '_speed')
+//
+////  } else if (health > oldHealth) {
+//      console.log(3)
+//      if (!entityBar_speed[index] || (health - oldHealth) > entityBar_speed[index]) {
+
+
+//        entityBar_speed[index] = Math.min(health - oldHealth, 0.2)
+
+// player.getRootData().putDouble('bossBar' + index + '_speed', Math.min(health - oldHealth, 0.2))//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+//      }
+//
+//      oldHealth += Math.min(0.02 * entityBar_speed[index], (health - oldHealth))//当差值小于一定程度时 直接使oldHealth=oldHealth+(heahth-oldHealth)
+//
+//      entityBar_vary[index] = oldHealth
+//      // player.getRootData().putDouble('bossBar' + index + '_vary', oldHealth)//设置变化条
+//
+//  } //player.getRootData().remove('bossBar' + index + '_speed') player.getRootData().getDouble('bossBar' + index + '_speed')
+//}
+//console.log(1)
+//console.log(entityBar_speed)
+// Client.player.tell('speed' + 0.01 * speed[index])
+// Client.player.tell('present' + present + 'vary' + vary)
+//  Client.player.tell(speed[index])
+//vary=Math.floor(vary*1000)/1000
+// if (entityBar_speed[index]) {//player.getRootData().contains('bossBar' + index + '_speed')
+//  if (type == 'health') {
+//      entityBar_speed[index] = 0
+//  } else {
+//      entityBar_shieldSpeed[index] = 0
+//
+//  } //   if (type == 'health') {
+//       entityBar_speed[index] = Math.min(vary - present, 0.3)//速度
+//   } else {
+//       entityBar_shieldSpeed[index] = Math.min(vary - present, 0.3)//速度
+//
+//   }
+// entityBar_speed[index] = Math.min(vary - present, 0.3)//速度
+
+//
+// player.getRootData().putDouble('bossBar' + index + '_speed', )//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+// console.log(2)
+//bossbar  变化条  bossbar1 速度  bossbar2减缓时间  //
+//  if (type == 'health') {
+//      entityBar_vary[index] -= Math.min(0.01 * speed[index], +vary - present)
+//  } else {
+
+//      entityBar_shieldVary[index] -= Math.min(0.01 * speed[index], +vary - present)
+//Client.player.tell(entityBar_speed[index])entity.getRootData().contains('entityBar_stop') &&
+//entity.getRootData().putInt('entityBar_stop', Math.max(time - 1, 0))!entityBar_speed[index] ||
+// = vary
+// player.getRootData().putDouble('bossBar' + index + '_vary', oldHealth)//设置变化条player.getRootData().getDouble('bossBar' + index + '_speed')
+// if (type == 'health') {
+//     entityBar_speed[index] = Math.min(present - vary, 0.4)
+// } else {
+//     entityBar_shieldSpeed[index] = Math.min(present - vary, 0.4)
+//  if (type == 'health') {
+//      entityBar_vary[index] += Math.min(0.02 * speed[index], (present - vary))//当差值小于一定程度时 直接使oldHealth=oldHealth+(heahth-oldHealth)
+//  } else {
+//      entityBar_shieldVary[index] += Math.min(0.02 * speed[index], (present - vary))//当差值小于一定程度时 直接使oldHealth=oldHealth+(heahth-oldHealth)
+//  }
+
+// player.getRootData().putDouble('bossBar' + index + '_vary', oldHealth)//设置变化条
+
+// }
+// player.getRootData().putDouble('bossBar' + index + '_speed', Math.min(health - oldHealth, 0.2))//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+//Client.player.tell('最大')
+//  }
+//console.log(3)
+//Client.player.tell('zhi'+(storeVary[index] -vary + present))

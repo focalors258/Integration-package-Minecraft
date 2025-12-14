@@ -1,0 +1,599 @@
+//界面状态
+let copy_select = 0//当前选项  区别于鼠标位置所选
+let copy_click = 0//点击反馈
+let copy_roll = 0//目录滚动
+let copy = false//是否打开
+
+let copy_click1 = 0
+
+//窗口ui信息显示
+let 副本_精英模式 = false//是否有精英模式
+
+let 副本_选项数量 = 10//选项数量
+
+let 副本_名称 = '副本'
+
+let 背景 = 'aaa'
+
+let 副本_描述 = ''//描述
+
+let 玩家_副本_星级 = [2, 1, 2, 1, 3, 2, 3, 2, 5, 1, 3, 2, 1, 1, 2]//星级 不同难度分开记录 长久保存
+
+let 星级_条件 = {}//仅在副本启用时生效
+
+let 副本_星级解锁 = [2, 1, 2, 1, 3, 2, 3, 2, 5, 1, 3, 2, 1, 1, 2]
+
+let 副本_boss等级 = [2, 1, 2, 1, 3, 2, 3, 2, 5, 1, 3, 2, 1, 1, 2]
+
+let 副本_解锁等级 = [2, 1, 2, 1, 3, 2, 3, 2, 5, 1, 3, 2, 1, 1, 2]
+
+let 挑战时间 = [2, 1, 2, 1, 3, 2, 3, 2, 5, 1, 3, 2, 1, 1, 2]
+
+let 副本_战利品={}
+//主页动画ui信息显示
+//let 副本_cooling_time1=0
+
+let 副本_condition = 0
+
+let 副本_time = 0
+
+let 副本_max_time = 0
+
+let copy_rangeUpdate = 0//副本范围更新间隔
+
+//实体缓存
+let copy_entity
+
+//let 副本_最低等级 = 40//最低等级
+//
+//let 副本_等级增长 = 4//等级增长deviation
+
+//let 副本_等级偏差 = 0//允许的等级偏差
+
+//let copy_projects_txt = []
+
+Animation.copyBeginsAnimation = 0
+Animation.copyLoseAnimation = 0
+Animation.copyWinAnimation = 0
+
+//let RenderJSRenderGuiEvent= Java.loadClass('com.chen1335.renderjs.client.events.renderEvent.RenderJSRenderGuiEvent') 
+
+let  rool =new Rool(0,0,50,180,副本_选项数量,0,101,'tytyyr')//目录对象
+
+
+
+let CopyUi = (event, guiGraphics) => {
+
+  
+ 
+ // tell(rool.flag())
+
+ // rool.slice()
+//tell(copy_roll)
+  // Client.player.tell(puffish_expLevel)
+
+  // RenderJSRenderSystem.enableBlendJS()//启用透明  允许之下的图片渲染透明颜色  本已经成功透明渲染的语句不能在其之中  注意 当语句之下使用了文字渲染 则文字渲染下的图片渲染将不再透明
+  RenderJSRenderSystem.enableBlendJS()//启用透明  允许之下的图片渲染透明颜色  本已经成功透明渲染的语句不能在其之中
+
+  if (Client.screen instanceof $LecternClass&&Client.player.containerMenu.containerId == 101) {
+    // RenderJSRenderSystem.setShaderColor(1,1,1,1)
+
+    if (copy_click1 < 60) copy_click1 += DPF * ((60 - copy_click1) / 30)//动画
+
+    if (60 - copy_click1 < 0.2) copy_click1 = 60
+
+
+    if (copy_select >= -1) {
+      if (copy_click < 60) copy_click += DPF * ((60 - copy_click) / 30)//动画
+
+      if (60 - copy_click < 0.2) copy_click = 60
+    }
+
+    let width = Client.window.guiScaledWidth
+
+    let height = Client.window.guiScaledHeight//缩放后屏幕大小
+
+    let selective = Math.floor((MouseY - copy_roll - 20 + 12.5) / 50) //鼠标当前位置选择的项目
+
+
+    let scale = 1.3 + 0.2 * Math.cos(copy_click / 60)
+
+    event.poseStack.pushPose()
+
+
+
+
+    event.poseStack.pushPose()
+    event.scale(width / 640, height / 375)//图片拉伸覆盖
+
+    event.translate(322, 166, 0)//先设置位置再调尺寸
+
+    // event.scale(0.4, 0.4)
+    event.scale(0.2 * scale, 0.2 * scale)
+
+    //  event.translate(-1212, -606, -1)
+
+    event.drawTexture(背景, -1280, -670, 2560, 1500, 0, 0, 2560, 1500)//图片
+    event.poseStack.popPose()
+
+    //Client.player.tell(getImageDimensions(背景))
+
+    event.fill(0, 0, 5000, 5000, 10, 10, 10, overlay * 12)//叠加层
+
+    //translucent
+
+//tell(getMouseScroll())
+
+
+    let MouseScroll = getMouseScroll()
+
+    if (MouseScroll != 0) {
+
+      copy_roll += MouseScroll * 15
+
+      //mouseScroll() = 0
+
+    }
+    //copy_roll使用除以屏幕缩放后的值
+    let exceed_roll = 0
+
+    let windowDiffer = 副本_选项数量 * 50 - height//窗口长度
+
+    if (windowDiffer < 0) {
+
+      exceed_roll = copy_roll// + ((副本_选项数量 * 50 - height) +副本_选项数量*50)//1420
+///tell(exceed_roll)
+    } else {
+
+      exceed_roll = copy_roll + ((副本_选项数量 * 50 - height))
+
+    }
+
+
+
+
+    event.poseStack.translate(0, copy_roll, 0)
+
+
+    if (copy_roll > 0) {
+
+      copy_roll *= 0.95
+
+      if (copy_roll < 0.05) copy_roll = 0//减少过小计算
+
+
+    } else if (copy_roll != 0 && exceed_roll < 0) {
+
+      copy_roll -= (exceed_roll) * 0.05
+
+      if (exceed_roll > -0.05) copy_roll = -(exceed_roll - copy_roll)//减少过小计算
+
+    }
+
+
+
+
+
+
+    for (let i = 0; i < 副本_选项数量; i++) {
+
+      event.poseStack.pushPose()
+      //event.translate(0, 0, 0)
+
+      if (副本_精英模式 && i == 副本_选项数量 - 1) {
+
+        event.drawTexture('kubejs:gui/copy.png', 0, i * 50 + 20, 512, 512, 176, 73, 176, 25)
+
+      } else {
+
+        event.drawTexture('kubejs:gui/copy.png', 0, i * 50 + 20, 512, 512, 0, 0, 176, 25)
+
+      }
+
+
+      event.poseStack.popPose()
+
+
+
+    }
+
+    let 当前可选最大难度 = -1//puffish_expLevel //- 副本_最低等级) / 副本_等级增长//难度等级解锁
+
+    while (副本_解锁等级[当前可选最大难度 + 1] < puffish_expLevel//条件1
+    
+    ) {
+      当前可选最大难度++
+    }
+    // tell(当前可选最大难度)
+    /*
+  &&
+      (
+        true // starIsUnlock(当前可选最大难度)
+        
+        */
+      //条件2
+    if (当前可选最大难度 < 0) copy_select = -1
+
+    if (!starIsUnlock(copy_select - 1)) copy_select = 0//缓存的当前选项 星级不足时  自动更新
+
+    if ((selective != copy_select
+      && selective >= 0//选项为0默认解锁
+      && selective < 副本_选项数量
+      && MouseX < 180
+      && selective <= 当前可选最大难度
+      && starIsUnlock(selective - 1))) {//选项大于等于1时由等级以上一个难度达成3星解锁
+
+      if (mouseLeftPost) {//鼠标点击
+
+        Client.player.playSound('minecraft:ui.button.click')
+
+        copy_select = selective
+
+        copy_click1 = 0
+      }
+      RenderJSRenderSystem.enableBlendJS()//启用透明  允许之下的图片渲染透明颜色  本已经成功透明渲染的语句不能在其之中
+
+      event.poseStack.pushPose()
+      event.translate(0, 0, 0)
+      event.drawTexture('kubejs:gui/copy.png', 0, (selective) * 50 + 20, 512, 512, 176, 0, 175, 25)//触摸反馈
+      event.poseStack.popPose()
+      //  Client.player.tell(难度)
+    }//选择难度逻辑
+
+    //Client.player.tell(Number('副本_名称'))
+    //Client.player.tell(副本_最低等级)
+
+    event.poseStack.pushPose()
+    //event.translate(0, 0, -50)
+    if (copy_select >= 0 && copy_select < 副本_选项数量) {
+
+      if (副本_精英模式 && copy_select == 副本_选项数量 - 1) {//精英难度
+
+        event.drawTexture('kubejs:gui/copy.png', 0, copy_select * 50 - 5 + 20, 512, 512, 180, 32, 180 * copy_click1 / 60, 35)//当前选项
+
+      } else {
+
+        event.drawTexture('kubejs:gui/copy.png', 0, copy_select * 50 - 5 + 20, 512, 512, 0, 32, 180 * copy_click1 / 60, 35)//当前选项
+      }
+
+    }
+
+    event.poseStack.popPose()
+
+
+
+    //(0>=  copy_select || 副本_星级[copy_select - 1] == 2) ===>当未达成成3星挑战但是最低难度时 解锁
+
+
+
+    for (let i = 0; i < 副本_选项数量; i++) {
+
+
+
+      let color = 205
+
+      if (copy_select == i) color = 255
+
+
+      event.poseStack.pushPose()
+      event.poseStack.scale(1.8, 1.8, 0)
+      //event.translate(0, 0, 99)
+      event.drawShadowString('难度' + (i + 1), 17 / 1.8, (i * 50 + 27) / 1.8, color, color, color, 205)
+      event.poseStack.popPose()
+
+
+      //tell(副本_星级解锁)
+
+
+      if (当前可选最大难度 >= i && starIsUnlock(i - 1)) {//玩家等级+5/20大于该项目时 渲染已解锁的样式Math.floor(副本_最低等级 + 副本_等级增长 * i)
+
+
+        //   event.pushPose()
+        //   event.scale(1, 1, 0)
+        //   //event.translate(0, 0, 99)
+        //   event.drawShadowString(('推荐等级' + 副本_解锁等级[i] + '挑战'), 95 / 1, (i * 50 + 32) / 1, color, color, color, 205)
+        //   event.popPose()
+
+        renderMultText(event, ('推荐等级' + 副本_解锁等级[i] + '挑战'), 1, 1, 95, (i * 50 + 32), Color.rgba(color, color, color, 205).getRgbJS(), 0)
+
+
+      } else {
+
+        event.poseStack.pushPose()
+
+        //event.translate(0, 0, -50)   Math.floor(i * 20 + 5 * 1 + 0.5 * i - 5) 
+        event.drawTexture('kubejs:gui/copy.png', 70, i * 50 + 19, 512, 512, 0, 80, 20, 28)//锁
+        event.poseStack.popPose()
+
+        event.poseStack.pushPose()
+        event.poseStack.scale(0.9, 0.9, 0)
+        //event.translate(0, 0, 99)
+
+        if (当前可选最大难度 >= i) {
+          event.drawShadowString(('上一难度需获得' + 副本_星级解锁[i] + '星'), 95 / 0.9, (i * 50 + 32) / 0.9, color, color, color, 205)
+
+        } else {
+          event.drawShadowString(('等级达到' + 副本_解锁等级[i] + '级解锁'), 95 / 0.9, (i * 50 + 32) / 0.9, color, color, color, 205)
+
+        }
+        event.poseStack.popPose()
+
+
+      }
+
+
+
+
+    }
+
+    //Client.player.tell(玩家_副本_星级)
+
+    let star = 玩家_副本_星级[copy_select]//当前选项星级
+
+    star = star ? star : 0
+
+    event.poseStack.popPose()
+
+
+
+    if (copy_select >= 0 && copy_select < 副本_选项数量) {
+      RenderJSRenderSystem.enableBlendJS()
+      event.poseStack.pushPose()
+
+      event.poseStack.translate(2 * (60 - copy_click), 0, 0)
+      event.drawTexture('kubejs:gui/copy.png', width - 304, 9, 512, 512, 0, 127, 304, 335)//主界面
+
+      event.poseStack.pushPose()
+      event.poseStack.translate(width - 267, 9, 0)
+
+      if (玩家_副本_星级[copy_select] > 0) event.drawTexture('kubejs:gui/copy.png', 0, 46, 512, 512, 25, 80, 36, 36)////星
+
+      if (玩家_副本_星级[copy_select] > 1) event.drawTexture('kubejs:gui/copy.png', 27, 46, 512, 512, 25, 80, 36, 36)////星
+
+      if (玩家_副本_星级[copy_select] > 2) event.drawTexture('kubejs:gui/copy.png', 54, 46, 512, 512, 25, 80, 36, 36)//星
+      
+        renderMultText(event,'挑战奖励', 0.8, 0.8, 4, 242, Color.rgba(205, 205, 205, 205).getRgbJS(), 99)
+      event.poseStack.popPose()
+
+
+      renderMultText(event, 副本_名称, 3, 3, (width - 250), (23), Color.rgba(245, 245, 245, 205).getRgbJS(), 0)//副本名称
+
+
+      renderMultText(event, '挑战', 1.5, 1.5, (width - 225), (322), Color.rgba(205, 205, 205, 205).getRgbJS(), 0)
+
+      renderMultText(event, '领域讨伐', 1.5, 1.5, (width - 85), (322), Color.rgba(200, 121, 121, 205).getRgbJS(), 0)
+
+      renderMultText(event, '等级:' + 副本_boss等级[copy_select], 1.4, 1.4, (width - 110), (39), Color.rgba(245, 245, 245, 205).getRgbJS(), 99)//生成的boss等级
+
+    
+      
+
+      if (newVirtualButton(width - 278, 311, 133, 36)) {//生成boss按钮
+
+
+        if (mouseLeftPost) {//鼠标点击
+
+          Client.player.playSound('minecraft:ui.button.click')
+
+          Client.player.closeMenu()//关闭
+
+          Client.player.sendData('copy', {
+            condition: 1,//状态
+            difficulty: copy_select,//难度
+            uuid: copy_entity.stringUuid
+          })
+
+        }
+
+        event.poseStack.pushPose()
+        event.translate(width - 278, 308, 0)
+        event.drawTexture('kubejs:gui/copy.png', 0, 0, 512, 512, 26, 466, 132, 36)//触摸反馈
+        event.poseStack.popPose()
+
+      }
+
+
+
+
+
+      renderMultText(event, 副本_描述, 1, 1, (width - 260), (90), getColor(205, 205, 205, 205), 180)
+
+
+      event.poseStack.popPose()
+
+    }
+    // event.pushPose()
+    //Client.player.tell(MouseX)
+    // //event.translate(0, 0, -50)   
+    // event.drawTexture('kubejs:gui/copy.png', 85, 50 + 19, 512, 512, 0, 80, 20, 28)//
+    // event.popPose()
+
+
+
+
+
+
+
+  } else {
+
+  }
+}
+
+
+
+
+
+RenderJSEvent.endScreen(101, e => {//界面关闭事件
+
+
+
+  copy_click = 0//副本动画
+
+  copy_click1 = 0//副本动画
+
+ // copy = false//副本界面
+
+})
+
+NetworkEvents.dataReceived('copy_data', event => {//随时需更新的信息显示
+
+  let entity = event.level.getEntity(event.data.getInt('entity'))
+
+  //副本_cooling_time1 = event.data.getInt('cooling_time1')
+
+  副本_condition = event.data.getInt('condition')
+
+  副本_time = event.data.getInt('time')
+
+  副本_max_time = event.data.getInt('max_time')
+
+  星级_条件 = event.data.get('star_user_rule')
+
+  copy_rangeUpdate = 20
+
+  //Client.player.tell(String(星级_条件))
+
+})
+
+NetworkEvents.dataReceived('copyBeginsAnimation', e => {//动画播放
+
+
+  Animation.copyBeginsAnimation = 150
+  //Client.player.tell( 456345)
+
+
+})
+
+NetworkEvents.dataReceived('copyWinAnimation', e => {//动画播放
+
+
+  Animation.copyWinAnimation = 120
+
+
+
+})
+
+NetworkEvents.dataReceived('copyLoseAnimation', e => {//动画播放
+
+
+  Animation.copyLoseAnimation = 120
+
+
+
+})
+
+
+
+
+NetworkEvents.dataReceived('copy_open', event => {//每次打开界面更新一次信息
+
+
+  //无需选定实体
+
+  背景 = event.data.getString('background')
+
+  挑战时间 = event.data.get('time')
+
+  副本_描述 = event.data.getString('describe')//描述
+
+  副本_选项数量 = event.data.getInt('projects')//选项数量  注意获取类型
+
+  副本_名称 = event.data.getString('name')//项目名称
+
+
+  玩家_副本_星级 = event.data.get('star')
+
+  //Client.player.tell(玩家_副本_星级)
+  副本_boss等级 = event.data.get('boss_level')//生成出来的等级
+
+  副本_解锁等级 = event.data.get('unlock_level')
+
+  副本_精英模式 = event.data.getBoolean('elite')
+
+  副本_星级解锁 = event.data.get('unlock_star')
+
+  副本_战利品=event.data.get('tool')
+  
+  
+ rool =new Rool(0,0,50,180,副本_选项数量,0,101,'tytyyr')
+
+  
+  copy_entity = event.level.getEntity(event.data.getInt('entity'))//用于对实体进行选中操作
+
+  //Client.player.tell('->'+event.data.get('star'))
+
+
+})
+
+let copyRangeUpdate = (event, player) => {
+
+
+
+  if (copy_rangeUpdate > 0 && !Client.paused) copy_rangeUpdate--
+
+
+
+
+
+}
+
+NetworkEvents.dataReceived('acquire_star_sound', event => {
+
+
+  $Minecraft.getInstance().player.playSound('minecraft:entity.experience_orb.pickup')
+
+
+})//更新客户端挑战星级数
+
+
+//setData(event.player,'int',,)客户端用外部变量取代pdata
+
+const starDescribe = {}
+
+starDescribe.time = function (data) {
+
+  return '在' + data.value + '秒内完成' + getSpecific(data)
+
+}
+
+starDescribe.be_att = function (data) {
+
+
+  return '受到的攻击次数不超过' + data.value + '次' + getSpecific(data)
+
+}
+
+
+starDescribe.reaction = function (data) {
+
+
+  return '触发' + data.value + '次' + data.type + '反应' + getSpecific(data)
+
+}
+starDescribe.att = function (data) {
+
+
+  return '对敌人造成至少' + data.value + '次攻击' + getSpecific(data)
+
+}
+
+
+
+let getSpecific = (data) => {
+
+
+
+  return '(' + data.present + '/' + data.value + ')'
+
+
+}
+
+let starIsUnlock = (i) => {
+
+//  if(i==1) tell( 玩家_副本_星级[i] )
+  
+  
+  return i < 0 || 玩家_副本_星级[i] >= 副本_星级解锁[i + 1]
+
+}
+

@@ -1,0 +1,726 @@
+//事件 显示实体血量 玩家 长 宽 血条类型 动画缓存 排序
+
+//_vary  变化条
+//_uuid 缓存uid
+//_stop 暂停动画
+//_speed 变化条速度
+
+
+let renderBossName = (event,i,width,height) => {
+    
+    //Client.font.width以最终缩放值为准
+    
+      //Client.player.tell( Client.font.width(String('Lv.' + bossBar.level[i] + ' ' + bossBar.name[i])))
+    event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局
+    event.translate(width + (40 - 0.45*Client.font.width(String('Lv.' + bossBar.level[i] + ' ' + bossBar.name[i]))), height , 0)
+    event.poseStack.scale(0.9, 0.9, 0.9)
+
+
+
+    event.drawString('Lv.' + bossBar.level[i] + ' ' + bossBar.name[i], 0, 0, 255, 255, 255, 255)
+    event.poseStack.popPose()
+
+
+
+}
+
+
+
+let bossBar = {}
+
+bossBar.vary = []//需要初始化
+
+bossBar.uuid = ['', '', '']
+
+bossBar.stop = [0, 0, 0]
+
+bossBar.speed = [0, 0, 0]
+
+bossBar.move = 0
+
+bossBar.value = []
+
+bossBar.level = []
+
+bossBar.name = []
+
+bossBar.shieldVary = []
+
+bossBar.shieldSpeed = []
+
+
+let renderBossBar = (event, health, player, entity, width, height, barType, oldHealth, index) => {
+    //  console.log(bossBar)
+    // Client.player.tell('1 oh '+oldHealth)
+
+
+
+
+    let shield = 0
+    //boss可能已死亡 排除
+    if (entity && entity.nbt && typeof entity.nbt['AbsorptionAmount'] == 'number') {//初始化护盾
+        //   let nbt = entity.getNbt()
+        //   nbt['AbsorptionAmount'] = 0
+        //   entity.setNbt(nbt)
+        shield = Math.min(1, entity.nbt['AbsorptionAmount'] / entity.getMaxHealth())
+
+    }
+    // Client.player.tell(shield)
+    //Client.player.tell(bossBar.shieldVary[index])
+
+    event.drawTexture('kubejs:gui/bossbar.png', width + 2, height + 1, 256, 256, 2, 21 + barType, 178, 3)
+
+    event.drawTexture('kubejs:gui/bossbar.png', width, height, 256, 256, 0, 0 + barType, 182, 5)//外框
+
+    event.poseStack.pushPose()
+    event.drawTexture('kubejs:gui/bossbar.png', width, height, 256, 256, 0, 61 + (barType), bossBar.shieldVary[index] * 182, 5)//注意  不要使用图片渲染自带的坐标偏移  会导致移动抖动
+    event.poseStack.popPose()//删除这个额外的poseStack
+
+
+    event.poseStack.pushPose()
+    event.drawTexture('kubejs:gui/bossbar.png', width, height, 256, 256, 0, 66 + barType, shield * 182, 5)//注意  不要使用图片渲染自带的坐标偏移  会导致移动抖动
+    event.poseStack.popPose()//删除这个额外的poseStack
+
+
+
+
+    if (health <= oldHealth) {
+
+        if (oldHealth > 0.0001) {//缩放时当前坐标也会乘以缩放值
+            event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局
+
+            event.poseStack.scale(oldHealth, 1, 1)
+            event.poseStack.translate((width + 2) / oldHealth, 0, 0)
+            event.drawTexture('kubejs:gui/bossbar.png', 0, height + 1, 256, 256, 2, 6 + barType, 178, 3)//注意  不要使用图片渲染自带的坐标偏移  会导致移动抖动
+            event.poseStack.popPose()//删除这个额外的poseStack
+        }
+        if (health > 0.0001) {
+            event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局
+
+            event.poseStack.scale((health), 1, 1)
+            event.poseStack.translate((width + 2) / health, 0, 0)
+
+            event.drawTexture('kubejs:gui/bossbar.png', 0, height + 1, 256, 256, 2, 16 + barType, 178, 3)
+            if (bossBar.stop[index] > 0) {//血条反馈  临时
+
+                //event.fill(0, height + 1, 178, 3, RenderJSGUI.rgbaColor(255, 255, 255, 120 ))
+                // event.drawTexture('kubejs:gui/bossbar.png', 0, height + 1, 256, 256, 2, 57 + barType, 178, 3)* bossBar.stop[index]/ 20
+
+            } else {
+
+
+            }
+
+            event.poseStack.popPose()
+        }
+    } else {
+
+        if (health && health > 0.0001) {
+            event.poseStack.pushPose()
+
+            event.poseStack.scale((health), 1, 1)
+            event.poseStack.translate((width + 2) / health, 0, 0)
+
+            event.drawTexture('kubejs:gui/bossbar.png', 0, height + 1, 256, 256, 2, 11 + barType, 178, 3)
+            event.poseStack.popPose()//删除这个额外的poseStack
+        }
+        if (oldHealth > 0.0001) {//缩放时当前坐标也会乘以缩放值
+            event.poseStack.pushPose()
+
+            event.poseStack.scale(oldHealth, 1, 1)
+            event.poseStack.translate((width + 2) / oldHealth, 0, 0)
+            event.drawTexture('kubejs:gui/bossbar.png', 0, height + 1, 256, 256, 2, 16 + barType, 178, 3)
+            //RenderJSGUI.blitJS(consumer.poseStack, (width + 2) / oldHealth, height + 1, 2, 16 + barType, 178, 3)//红
+            event.poseStack.popPose()
+        }
+    }
+
+    //  RenderJSGUI.blitJS(consumer.poseStack, width, height, 0, 0 + barType, 182, 5)//框
+
+}
+
+//_vary  变化条
+//_uuid 缓存uid
+//_stop 暂停动画
+//_speed 变化条速度
+
+let barData = (player, entity, index) => {
+
+
+
+    if (!(bossBar.vary[index]) && bossBar.vary[index] != 0) {
+
+        bossBar.vary[index] = 1
+    }
+
+    if (!(typeof bossBar.shieldVary[index] === 'number')) {//初始化
+        bossBar.shieldVary[index] = 0
+    }
+
+
+    let shield = 0
+
+    if (entity.nbt && typeof entity.nbt['AbsorptionAmount'] == 'number') {//初始化护盾
+        //   let nbt = entity.getNbt()
+        //   nbt['AbsorptionAmount'] = 0
+        //   entity.setNbt(nbt)
+        shield = Math.min(1, entity.nbt['AbsorptionAmount'] / entity.getMaxHealth())
+
+    }
+
+
+
+    let oldShield = bossBar.shieldVary[index]
+
+    let presentHealth = entity.getHealth()
+
+    let maxHealth = entity.getMaxHealth()
+
+    let oldHealth = 0//player.getRootData().getDouble('bossBar' + index + '_vary')1//
+
+    let health = presentHealth / maxHealth
+
+    let time = bossBar.stop[index]
+
+
+
+
+    if (bossBar.uuid[index] != entity.stringUuid) {//当boss缓存与当前boss不相等时  更新变化条
+        //console.log('有id缓存且不相同')
+        oldHealth = presentHealth / maxHealth //注意  此处已修改1//
+
+        bossBar.uuid[index] = entity.stringUuid//注意实体组未知排序问题
+
+        bossBar.vary[index] = oldHealth//设置变化条 不再设置默认变化条
+    } else {
+        //console.log('有id缓存且相同')
+        oldHealth = bossBar.vary[index]
+
+    }
+
+
+
+    //console.log(oldHealth)
+
+    if (oldHealth - health == 0.00) {//当变化条少于生命条+0.00时  使两值相等  并重置bossbar1(变化条速度)
+
+        bossBar.speed[index] = 0
+
+    } else if (health < oldHealth) {//当变化条大于生命条足够多时 
+
+        if ((oldHealth - health) > bossBar.speed[index]) {
+            bossBar.speed[index] = Math.min(oldHealth - health, 0.2)//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+        }
+        //bossbar  变化条  bossbar1 速度  bossbar2减缓时间
+        if (time <= 0) {
+            // Client.player.tell(0.01* bossBar.speed[index])
+
+            // Client.player.tell(( oldHealth - health))
+            oldHealth -= Math.min(0.01 * bossBar.speed[index], oldHealth - health)
+        }
+
+
+        // bossBar.stop[index] = Math.max(time - 1, 0)
+
+
+        bossBar.vary[index] = oldHealth//设置变化条
+
+    } else if (health > oldHealth) {
+
+        if ((health - oldHealth) > bossBar.speed[index]) {
+
+            bossBar.speed[index] = Math.min(health - oldHealth, 0.3)//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+        }
+
+        oldHealth += Math.min(0.02 * bossBar.speed[index], (health - oldHealth))//当差值小于一定程度时 直接使oldHealth=oldHealth+(heahth-oldHealth)
+
+        bossBar.vary[index] = oldHealth//设置变化条
+
+    }
+    //Client.player.tell(bossBar.shieldSpeed[index])
+
+    if (oldShield - shield == 0.00) {//当变化条少于生命条+0.00时  使两值相等  并重置bossbar1(变化条速度)
+
+        bossBar.shieldSpeed[index] = 0
+
+    } else if (shield < oldShield) {//当变化条大于生命条足够多时 
+
+        if ((oldShield - shield) > bossBar.shieldSpeed[index]) {
+            bossBar.shieldSpeed[index] = Math.min(oldShield - shield, 0.2)//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+        }
+        //bossbar  变化条  bossbar1 速度  bossbar2减缓时间
+        if (time <= 0) {
+            // Client.player.tell(0.01* bossBar.speed[index])
+
+            // Client.player.tell(( oldHealth - health))
+            oldShield -= Math.min(0.01 * bossBar.shieldSpeed[index], oldShield - shield)
+        }
+
+
+        // bossBar.stop[index] = Math.max(time - 1, 0)
+
+
+        bossBar.shieldVary[index] = oldShield//设置变化条
+
+    } else if (shield > oldShield) {
+
+        //  if ((shield - oldShield) > bossBar.shieldSpeed[index]) {
+
+        //      bossBar.shieldSpeed[index] = Math.min(shield - oldShield, 0.3)//当速度不存在时 由变化条与生命条之差决定速度   当变化条与生命条之差大于原先的速度时  使速度等于当前的变化条与生命条之差
+        //  }
+
+        oldShield = shield //当差值小于一定程度时 直接使oldHealth=oldHealth+(heahth-oldHealth)
+
+        bossBar.shieldVary[index] = oldShield//设置变化条
+
+    }
+
+
+
+
+
+
+
+
+
+    bossBar.value[index] = health//缓存boss生命值
+
+    bossBar.name[index] = entity.name.string//缓存boss名称
+
+    bossBar.stop[index] = Math.max(time - 1, 0)
+
+    bossBar.level[index] = getData(entity, 'int', 'level')//entity.nbt['ForgeData']['LEVEL'] //缓存boss等级
+
+    //Client.player.tell(getData(entity, 'int', 'level'))
+
+    //levelList[entity.stringUuid]//entity.nbt['ForgeData']
+
+
+
+
+    //  console.log(getData(player,'double','bossBar' + index + '_value'))
+    // Client.player.tell('2 oh '+oldHealth)
+    //
+    //  Client.player.tell('2  h '+health)
+
+    return [oldHealth, oldShield]
+
+
+}
+
+
+let barLogic = (event) => {
+
+
+    //  event.addRender(consumer => { })
+
+    let player = Client.player
+    let pData = player.getRootData()
+
+    //let move = getData(player, 'int', 'bossBar_move')
+    //let move = 0
+    let guiScale = 4 - Client.window.guiScale
+
+    let entitys = []//待遍历
+    let quantity = 0
+    player.level.getEntities().forEach(entity => {
+
+        if (areData(entity, 'boss') && player.distanceToEntity(entity) <= 64) {
+
+            entitys[quantity] = entity
+            quantity++
+        }
+    })
+    if (entitys.length) {//生成动画
+
+
+        bossBar.move = Math.min(bossBar.move + DPF, 60)
+
+
+
+
+    } else if(bossBar.move >0){
+
+      //  Client.player.tell(bossBar.vary[0])
+        
+        bossBar.vary[0]=Math.max(bossBar.vary[0]-0.01 * bossBar.speed[0],0)
+
+        bossBar.move = Math.max(bossBar.move - DPF, 0)
+
+        if (bossBar.move == 0) {
+
+
+
+            for (let index = 0; index < 3; index++) {
+                bossBar.vary[index] = undefined //删除boss生命值缓存
+            }
+        }
+
+    }
+
+    //
+
+
+    //
+    if (bossBar.move > 0) {
+
+        var width = (event.window.guiScaledWidth / 2) - 41//x轴缩放中心
+
+        var height = (event.window.guiScaledHeight / 2) - (180 + (Math.pow((bossBar.move / 7 - 6), 2) - 8)) * guiMultipleY//y轴缩放中心
+
+        if (quantity == 1) {
+
+           // event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局
+//
+           // event.translate(width + (80 - Client.font.width(String('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0]))), height + 0, 0)
+           // event.poseStack.scale(0.9, 0.9, 0.9)
+//
+           // // Client.player.tell(bossBar.level[0] )
+//
+           // event.drawString('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0], 0, 0, 255, 255, 255, 255)
+            // event.poseStack.popPose()
+            renderBossName(event,0,width,height)
+        
+            renderBossBar(event, entitys[0].getHealth() / entitys[0].getMaxHealth(), player, entitys[0], width - 50, height + 10, 0, barData(player, entitys[0], 0)[0], 0)
+
+
+        } else if (quantity == 2) {
+            
+            
+            renderBossName(event,0,width-65,height)
+            
+            renderBossName(event,1,width+70,height)
+           // event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局
+           // event.translate(width + (80 - Client.font.width(String('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0]))), height + 0, 0)
+           // event.poseStack.scale(0.9, 0.9, 0.9)
+//
+           // renderText()
+           // event.drawString('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0], (width + 2.5 - 0.5 * Client.font.width(String('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0])) / guiMultipleX), height, 255, 255, 255, 255)
+           // event.drawString('Lv.' + bossBar.level[1] + ' ' + bossBar.name[1], (width + 152.5 - 0.5 * Client.font.width(String('Lv.' + bossBar.level[1] + ' ' + bossBar.name[1])) / guiMultipleX), height, 255, 255, 255, 255)
+           // event.poseStack.popPose()
+            renderBossBar(event, entitys[0].getHealth() / entitys[0].getMaxHealth(), player, entitys[0], width - 85, height + 10, 25, barData(player, entitys[0], 0)[0], 0)
+            renderBossBar(event, entitys[1].getHealth() / entitys[1].getMaxHealth(), player, entitys[1], width + 50, height + 10, 25, barData(player, entitys[1], 1)[0], 1)
+
+            // if (bossBar.vary[2] != undefined) {
+            //     bossBar.vary[2] = undefined
+            // }
+        } else if (quantity > 2) {
+
+            renderBossName(event,0,width-125,height)
+            
+            renderBossName(event,1,width-0,height)
+            
+            renderBossName(event,2,width+125,height)
+           // event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局
+           // event.translate(width + (80 - Client.font.width(String('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0]))), height + 0, 0)
+           // event.poseStack.scale(0.9, 0.9, 0.9)
+           // event.drawString('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0], (width - 0.2 * Client.font.width(String('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0])) / guiMultipleX + 185 - 285), height, 255, 255, 255, 255)
+           // event.drawString('Lv.' + bossBar.level[1] + ' ' + bossBar.name[1], (width - 0.2 * Client.font.width(String('Lv.' + bossBar.level[1] + ' ' + bossBar.name[1])) / guiMultipleX + 325 - 285), height, 255, 255, 255, 255)
+           // event.drawString('Lv.' + bossBar.level[2] + ' ' + bossBar.name[2], (width - 0.2 * Client.font.width(String('Lv.' + bossBar.level[2] + ' ' + bossBar.name[2])) / guiMultipleX + 465 - 285), height, 255, 255, 255, 255)
+           // event.poseStack.popPose()
+            width -= 20
+            renderBossBar(event, entitys[0].getHealth() / entitys[0].getMaxHealth(), player, entitys[0], width - 125, height + 10, 25, barData(player, entitys[0], 0)[0], 0)
+            renderBossBar(event, entitys[1].getHealth() / entitys[1].getMaxHealth(), player, entitys[1], width, height + 10, 25, barData(player, entitys[1], 1)[0], 1)
+            renderBossBar(event, entitys[2].getHealth() / entitys[2].getMaxHealth(), player, entitys[2], width + 125, height + 10, 25, barData(player, entitys[2], 2)[0], 2)
+
+
+
+        } else {//boss离开玩家范围内时 缓存生命值 使动画播放完全
+
+            event.poseStack.pushPose()//额外创建一个poseStack  之后对其的修改不影响全局getData(player,'int','bossBar' + 1 + '_level') getData(player,'double','bossBar' + 1 + '_name') 
+            event.poseStack.scale(0.9, 0.9, 0.9)
+
+            event.drawString('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0], width + 77.5 - 0.5 * Client.font.width(String('Lv.' + bossBar.level[0] + ' ' + bossBar.name[0])), height, 255, 255, 255, 255)
+            event.poseStack.popPose()
+
+
+            //pData.remove('bossBar' + 1 + '_stop')
+            //pData.remove('bossBar' + 2 + '_stop')
+            //pData.remove('bossBar' + 3 + '_stop')
+            renderBossBar(event, 0, player, null, width - 50, height + 10, 0, bossBar.vary[0], 0)
+
+
+
+            //    let bossBarEnd = []
+            //    for (let i = 0; i < 3; i++) {
+            //        if (areData(player, ('bossBar' + (i + 1) + '_value'))) {
+            //            bossBarEnd[i] = getData(player, 'double', ('bossBar' + (i + 1) + '_value'))//注意i+1要加括号
+            //        }
+            //    } switch (bossBarEnd.length) {
+            //        case 1: {
+
+            //            renderBossBar(consumer, bossBarEnd[0], player, width, height, 0, bossBarEnd[0])
+
+            //            console.log('数量' + 1)
+            //            break
+            //        }
+            //        case 2: {
+
+            //            renderBossBar(consumer, bossBarEnd[0], player, width - 30, height, 25, bossBarEnd[0])
+
+            //            renderBossBar(consumer, bossBarEnd[1], player, width + 100, height, 25, bossBarEnd[1])
+
+
+            //            console.log('数量' + 2)
+            //            break
+            //        }
+
+            //        case 3: {
+
+            //            renderBossBar(consumer, bossBarEnd[0], player, width + 27, height, 25, bossBarEnd[0])
+            //            renderBossBar(consumer, bossBarEnd[1], player, width - 98, height, 25, bossBarEnd[1])
+            //            renderBossBar(consumer, bossBarEnd[2], player, width + 152, height, 25, bossBarEnd[2])
+            //            break
+            //        }
+            //    }
+
+        }
+
+    }
+    // RenderJSGUI.drawJS(consumer.poseStack, Client.font, '等级:', width + 12, height - 10, RenderJSGUI.rgbaColor(206, 206, 206, 255))
+
+
+
+    //event.addRender(consumer => { })
+
+
+    //if (!(Client && Client.player)) return
+
+    //  RenderJSRenderSystem.setShaderTextureJS(new ResourceLocation("kubejs:gui/bossbar.png"))
+
+
+    // RenderJSRenderSystem.setShaderTextureJS(new ResourceLocation("kubejs:gui/campbar.png"))
+
+    //RenderJSGUI.blitJS(consumer.poseStack, 200, 100, 0, 99, 10, 10)
+
+
+    // RenderJSGUI.blitJS(consumer.poseStack, 200, 10, 0, 99, 10, 10)
+
+    //  let player = Client.player
+    //  let pData = player.getRootData()
+    //  let quantity = 0
+
+
+
+
+
+    // Client.player.tell(getData(player, 'double', 'bossBar' + 1 + '_value'))
+    //Client.player.tell(move)
+    // console.log(entitys.length)
+    if (false) {
+
+        var width = (consumer.window.guiScaledWidth / 2) - 91//x轴缩放中心
+
+        var height = (consumer.window.guiScaledHeight / 2) - 170 - (Math.pow((move / 7 - 6), 2) - 4)//y轴缩放中心
+
+        if (quantity == 1 && entitys[0]) {
+
+            /**@type {Internal.LivingEntity} */
+
+            let entity = entitys[0]
+
+
+
+
+
+            let oldHealth = barData(player, entity, '1')
+
+            renderBossBar(consumer, entity.getHealth() / entity.getMaxHealth(), player, width, height, 0, oldHealth, 1)
+
+
+            pData.remove('bossBar' + 2 + '_value')//数值
+            pData.remove('bossBar' + 3 + '_value')
+
+            pData.remove('bossBar' + 2 + '_name')//名称
+            pData.remove('bossBar' + 3 + '_name')
+
+            pData.remove('bossBar' + 2 + '_level')//等级
+            pData.remove('bossBar' + 3 + '_level')//是否占用性能?????????????????
+
+        } else if (quantity == 2 && entitys[0] && entitys[1]) {
+
+            /**@type {Internal.LivingEntity} */
+            let entity1 = entitys[0]
+            /**@type {Internal.LivingEntity} */
+            let entity2 = entitys[1]
+
+            let oldHealth1 = barData(player, entity1, '1')
+
+            let oldHealth2 = barData(player, entity2, '2')
+
+            renderBossBar(consumer, entity1.getHealth() / entity1.getMaxHealth(), player, width - 30, height, 25, oldHealth1, 1)
+
+            renderBossBar(consumer, entity2.getHealth() / entity2.getMaxHealth(), player, width + 100, height, 25, oldHealth2, 2)
+
+            pData.remove('bossBar' + 3 + '_value')
+
+            pData.remove('bossBar' + 3 + '_level')
+
+            pData.remove('bossBar' + 3 + '_name')
+
+        } else if (quantity > 2 && entitys[0] && entitys[1] && entitys[2]) {
+
+
+            /**@type {Internal.LivingEntity} */
+            let entity1 = entitys[0]
+
+            /**@type {Internal.LivingEntity} */
+            let entity2 = entitys[1]
+
+            /**@type {Internal.LivingEntity} */
+            let entity3 = entitys[2]
+
+            let oldHealth1 = barData(player, entity1, '1')
+
+            let oldHealth2 = barData(player, entity2, '2')
+
+            let oldHealth3 = barData(player, entity3, '3')
+
+            renderBossBar(consumer, entity1.getHealth() / entity1.getMaxHealth(), player, width + 27, height, 25, oldHealth1, 1)
+
+            renderBossBar(consumer, entity2.getHealth() / entity2.getMaxHealth(), player, width - 98, height, 25, oldHealth2, 2)
+
+            renderBossBar(consumer, entity3.getHealth() / entity3.getMaxHealth(), player, width + 152, height, 25, oldHealth3, 3)
+
+        } else if (entitys.length == 0) {//boss离开玩家范围内时 缓存生命值 使动画播放完全
+
+            let bossBarEnd = []
+            for (let i = 0; i < 3; i++) {
+                if (areData(player, ('bossBar' + (i + 1) + '_value'))) {
+                    bossBarEnd[i] = getData(player, 'double', ('bossBar' + (i + 1) + '_value'))//注意i+1要加括号
+                }
+            } switch (bossBarEnd.length) {
+                case 1: {
+
+                    renderBossBar(consumer, bossBarEnd[0], player, width, height, 0, bossBarEnd[0])
+
+                    console.log('数量' + 1)
+                    break
+                }
+                case 2: {
+
+                    renderBossBar(consumer, bossBarEnd[0], player, width - 30, height, 25, bossBarEnd[0])
+
+                    renderBossBar(consumer, bossBarEnd[1], player, width + 100, height, 25, bossBarEnd[1])
+
+
+                    console.log('数量' + 2)
+                    break
+                }
+
+                case 3: {
+
+                    renderBossBar(consumer, bossBarEnd[0], player, width + 27, height, 25, bossBarEnd[0])
+                    renderBossBar(consumer, bossBarEnd[1], player, width - 98, height, 25, bossBarEnd[1])
+                    renderBossBar(consumer, bossBarEnd[2], player, width + 152, height, 25, bossBarEnd[2])
+                    break
+                }
+            }
+
+        }
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+NetworkEvents.dataReceived('boss_bar', event => {
+
+    //Client.gameRenderer.displayItemActivation('')event.level.getEntity(Object(uuid))//
+
+    let value //= event.data.getDouble('value')//数值  注意获取类型
+
+    let name = event.data.getString('name')//项目名称
+
+    let id = event.data.getInt('entity')//实体id  注意 不能使用getid获取实体数字id
+
+    let player = event.player
+
+    let entitys = event.level.entities
+
+
+    let entity = event.level.getEntity(id)// getUuidEntity(id)
+
+    if (entity) {
+
+        if (name == 'boss') {//double
+
+
+            setData(entity, 'boolean', 'boss', true)//同步标签<------存在boss上
+
+
+
+        } else if (name == 'bossBar_stop') {//受击反馈
+
+            if (entity.stringUuid == bossBar.uuid[0]) {
+
+                bossBar.stop[0] = event.data.getInt('value')//数值  注意获取类型
+
+
+            } else if (entity.stringUuid == bossBar.uuid[1]) {
+
+                bossBar.stop[1] = event.data.getInt('value')//数值  注意获取类型
+
+
+            } else if (entity.stringUuid == bossBar.uuid[2]) {
+
+                bossBar.stop[2] = event.data.getInt('value')//数值  注意获取类型
+
+
+            }
+
+            //  let time = player.getRootData().getInt('bossBar1_stop')
+            // Client.player.tell(time)
+        }
+    }
+
+})
+
+/*
+     //value = event.data.getBoolean('value')//数值  注意获取类型
+            // console.log('boss')
+  //    setData(entity, 'int', 'level', event.data.getInt('level'))
+
+else if (name == 'bossBar_value') {//同步变化条<----------存在玩家上
+return
+            if (entity.stringUuid == bossBar.uuid[0]) {
+
+                bossBar.value[0] = event.data.getDouble('value')//数值  注意获取类型
+
+
+            } else if (entity.stringUuid == bossBar.uuid[1]) {
+
+                bossBar.value[1] = event.data.getDouble('value')//数值  注意获取类型
+
+
+            } else if (entity.stringUuid == bossBar.uuid[2]) {
+
+                bossBar.value[2] = event.data.getDouble('value')//数值  注意获取类型
+
+
+            }
+        } 
+
+
+
+
+
+
+
+
+ */

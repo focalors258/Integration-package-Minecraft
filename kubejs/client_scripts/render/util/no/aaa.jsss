@@ -1,0 +1,1874 @@
+// priority: 100
+/**
+ * KubeJS基于原版制作的粒子库 需要前置工具类 MathUtil
+ * 本粒子库支持
+ * 一些作者预设的简单粒子
+ * 线:一个点到另一个点 首位相连多个点 一个点连接多个点 抛物线 缓动函数 雷电
+ * 面:正多边形 正三角形 椭圆 矩形 圆形 小写字母数字 星型 soma3 五角星
+ * 体:正方体 长方体 正多边形的棱锥 球 椭球体
+ * 寻路: A*寻路
+ */
+
+
+
+
+const ParticleUtil = {
+  //寻路坐标缓存
+  PathFinderCache: [],
+  //缓动函数枚举
+  Easing: {
+    easeInSine: 'easeInSine',
+    easeOutSine: 'easeOutSine',
+    easeInOutSine: 'easeInOutSine'
+  },
+   
+  //好看的预设粒子
+
+  /**
+   * 烟花特效
+   * @param {$Vec3_} pos
+   * @param {$Level_} level 生成的世界 默认为主世界
+   */
+    fireworks: function (pos, level) {
+      
+     
+        
+    level = level === undefined ? getServer().getLevel('minecraft:overworld') : level
+    let entity = level.createEntity("firework_rocket")
+    entity.pos = pos
+    entity.mergeNbt(`{Life:0, FireworksItem:{id:"firework_rocket", count:1, components:{fireworks:{flight_duration:0,explosions:[{shape:"small_ball", colors:[I;16711680], fade_colors:[I;16776960]}]}}}}`)
+    entity.spawn()
+  },
+  /**
+   * 爆炸的粒子
+   * @param {$Vec3_} pos
+   * @param {$ParticleOptions | String} particle 粒子效果 默认end_rod
+   * @param {$Level_} level 生成的世界 默认为主世界
+   */
+  explosionParticle: function (pos, particle, level) {
+    level = level === undefined ? getServer().getLevel('minecraft:overworld') : level
+    level.spawnParticles(particle ?? "end_rod", false, pos.x(), pos.y(), pos.z(), 0, 0, 0, 100, 0.25)
+  },
+  /**
+   * 受伤的粒子特效
+   * @param {$Vec3_} pos
+   * @param {$Level_} level 生成的世界 默认为主世界
+   */
+  hurtParticle(pos, level) {
+    level = level === undefined ? getServer().getLevel('minecraft:overworld') : level
+    level.spawnParticles(`minecraft:block{block_state: "minecraft:redstone_block"}`, false, pos.x(), pos.y(), pos.z(), 0.5, 0.5, 0.5, 30, 2)
+  },
+  /**
+   * 作者预设图案 青莲封印
+   * @param {$Vec3_} pos
+   * @param {Number} t
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  graphic1Complete: function (pos, t, step) {
+    let points = []
+    for (let i = -t; i < t; i += step) {
+      let x = -8 * Math.sin(5 * i) - 5 * Math.sin(9 * i)
+      let y = -8 * Math.cos(5 * i) - 5 * Math.cos(9 * i)
+      points.push($Vec3(pos.x() + x, pos.y() + y, pos.z()))
+    }
+    return points
+  },
+  /**
+   * 作者预设图案 爱心
+   * @param {$Vec3_} pos
+   * @param {Number} t
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  graphic2Complete: function (pos, t, step) {
+    let points = []
+    for (let i = -t; i < t; i += step) {
+      let x = 16 * Math.pow(Math.sin(i), 3);
+      let y = 13 * Math.cos(i) - 5 * Math.cos(2 * i) - 2 * Math.cos(3 * i) - Math.cos(4 * i);
+      points.push($Vec3(pos.x() + x, pos.y() + y, pos.z()))
+    }
+    return points
+  },
+
+  //绘制粒子
+
+  /**
+   * 绘制粒子
+   * @param {$Vec3_[]} points 所有的粒子的位置数组
+   * @param {Boolean} showPoints 如果为false则表示不会显示过去的粒子 如果为true或者有值则表示会渲染过去的粒子
+   * @param {Boolean} isDelayed 是否延时展示
+   * @param {Number} tick 粒子显示的时长 有延时则是要求多少tick内全部展示完毕 有延时但是tick为-1的话则表示以1tick展示1个粒子的速度展示
+   * @param {$ParticleOptions_ | $ParticleOptions_[] | String | String[]} particle 粒子效果 默认end_rod 支持多个粒子类型 但是要求如果是多个粒子坐标数和粒子类型数要一致
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1 
+   * @param {$ServerPlayer_[]} players 可见的玩家，默认为当前世界所有的玩家
+   */
+  drawParticle: function (points, showPoints, isDelayed, tick, particle, lifeTime, players) {
+    //简单的数据校验
+    if (!(Array.isArray(points) && typeof showPoints === 'boolean' && typeof isDelayed === 'boolean' && typeof tick === 'number' && (particle instanceof $ParticleOptions || Array.isArray(particle) || typeof particle === 'string') && typeof lifeTime === 'number')) {
+      console.error('数据类型有误')
+      return
+    }
+    //多粒子类型
+    if (Array.isArray(particle)) {
+      //如果点和粒子的数量对不上
+      if (points.length < particle.length) {
+        console.error("粒子类型的数量不能大于坐标的数量");
+        return
+      } else if (points.length > particle.length) {
+        particle = this.summonSubArray(points.length, particle)
+      }
+
+      let newParticles = []
+      particle.forEach(p => {
+        newParticles.push(this.particleToString(p))
+      })
+      particle = newParticles
+    } else {
+      //单粒子类型
+      particle = this.particleToString(particle)
+    }
+
+    //整理传参
+    const data = {
+      points: MathUtil.vec3ToArray(points),
+      showPoints: showPoints,
+      isDelayed: isDelayed,
+      tick: tick,
+      particle: particle,
+      lifeTime: lifeTime
+    }
+
+    players = players === undefined ? getServer().getPlayerList().players : players
+    players.forEach(
+      /**
+       * @param {$ServerPlayer_} player
+       */
+      player => {
+        player.sendData('drawParticle', data)
+      }
+    )
+  },
+  /**
+   * 延时绘制粒子
+   * @param {$Vec3_[]} points 粒子坐标数组
+   * @param {Boolean} isShow 是否显示过去的粒子
+   * @param {Number} tick 多少时间内全部显示完毕
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子类型 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   * @param {$ServerPlayer_[]} players 可见的玩家，默认为当前世界所有的玩家
+   */
+  drawParticleDelayed: function (points, isShow, tick, particle, lifeTime, players) {
+    this.drawParticle(points, isShow, true, tick, particle ?? "end_rod", lifeTime ?? -1, players)
+  },
+  /**
+   * 一次性全部粒子显示
+   * @param {$Vec3_[]} points 粒子坐标数组
+   * @param {Number} tick 显示粒子的时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子类型 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   * @param {$ServerPlayer_[]} players 可见的玩家，默认为当前世界所有的玩家
+   */
+  drawParticleNoDelayed: function (points, tick, particle, lifeTime, players) {
+    this.drawParticle(points, false, false, tick, particle ?? "end_rod", lifeTime ?? -1, players)
+  },
+
+  //线
+
+  /**
+   * 直线从一个点到另一个点 完整方法
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {Number} step 步长
+   * @returns {$Vec3_[]}
+   */
+  lineComplete: function (startPos, endPos, step) {
+    let points = []
+    let [x, y, z] = MathUtil.vec3ToArray(startPos)
+    let [x1, y1, z1] = MathUtil.vec3ToArray(startPos)
+    let [x2, y2, z2] = MathUtil.vec3ToArray(endPos)
+
+    let d = startPos.distanceTo(endPos)
+
+    // 计算需要的粒子数
+    let count = Math.floor(d / step)
+
+    let ParticleDx = (x2 - x1) / count
+    let ParticleDy = (y2 - y1) / count
+    let ParticleDz = (z2 - z1) / count
+
+    for (let i = 0; i <= count; i++) {
+      points.push($Vec3(x, y, z))
+      x += ParticleDx
+      y += ParticleDy
+      z += ParticleDz
+    }
+    return points
+  },
+
+  /**
+   * 首位相连多个点 完整方法
+   * @param {$Vec3_[]} point_list 点列表
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  lineLinkComplete: function (point_list, step) {
+    let points = [];
+    for (let n = 0; n < point_list.length; n++) {
+      let startPos, endPos
+      if (n === point_list.length - 1) {
+        startPos = $Vec3(point_list[n].x(), point_list[n].y(), point_list[n].z())
+        endPos = $Vec3(point_list[0].x(), point_list[0].y(), point_list[0].z())
+      } else {
+        startPos = $Vec3(point_list[n].x(), point_list[n].y(), point_list[n].z())
+        endPos = $Vec3(point_list[n + 1].x(), point_list[n + 1].y(), point_list[n + 1].z())
+      }
+      points = points.concat(this.lineComplete(startPos, endPos, step))
+    }
+    return points
+  },
+
+  /**
+   * 一个点连接多个点 完整方法
+   * @param {$Vec3_} pos - 起始点坐标
+   * @param {$Vec3_[]} pointsList - 点列表
+   * @param {Number} step - 步长
+   * @returns {$Vec3_[]} - 点列表
+   */
+    lineLinkOneToNComplete: function (pos, pointsList, step) {
+      
+        
+        
+    let points = [];
+    pointsList.forEach(p => {
+      points = points.concat(this.lineComplete(pos, p, step))
+    });
+    return points;
+  },
+
+  /**
+   * 抛物线粒子 完整版
+   * @param {$Vec3_} startPos 起点坐标
+   * @param {$Vec3_} endPos 终点坐标
+   * @param {Number} step 步长
+   * @returns {$Vec3_[]}
+   */
+  parabolaComplete: function (startPos, endPos, step) {
+    let points = []
+    let [x, y, z] = MathUtil.vec3ToArray(startPos)
+    let [x1, y1, z1] = MathUtil.vec3ToArray(startPos)
+    let [x2, y2, z2] = MathUtil.vec3ToArray(endPos)
+    let [x3, y3, z3] = MathUtil.vec3ToArray(MathUtil.get3rdPointParabola(startPos, endPos))
+    let d = new $Vec3(x1, 0, z1).distanceTo($Vec3(x2, 0, z2))
+    let d3 = new $Vec3(x1, 0, z1).distanceTo($Vec3(x3, 0, z3))
+    let count = Math.floor(d / step);
+    let px = 0;
+    let [a, b, c] = MathUtil.solveParabola($Vec2(0, d3), $Vec2(d, 0), $Vec2(y3 - y1, y2 - y1))
+    let dx = (x2 - x1) / count;
+    let dz = (z2 - z1) / count;
+    for (let i = 0; i <= count; i++) {
+      points.push($Vec3(x, y, z));
+      px += step;
+      let py = a * px * px + b * px + c;
+      x += dx;
+      y = y1 + py;
+      z += dz;
+    }
+    return points
+  },
+  /**
+   * 生成半径不变，轨迹支持自定义的螺线
+   * @param {$Vec3_} startPos 开始点
+   * @param {$Vec3_} endPos 结束点
+   * @param {Number} r 半径
+   * @param {Number} step 步长
+   * @param {Number} degree 起始角度
+   * @param {String} pathType 螺线轨迹类型，内置直线（line），抛物线(parabola)，也可自定义(custom),自定义时需填写custom_points参数为你的点列表
+   * @param {Boolean} add 是否附加轨迹点，false时将只返回螺线上的点
+   * @param {Number} degD 螺线旋转速度
+   * @param {$Vec3_[]} customPoints 点列表，自定义轨迹时会将此列表中的点作为轨迹
+   * @returns {$Vec3_[]}
+   */
+  helixComplete: function (startPos, endPos, r, step, degree, pathType, add, degD, customPoints) {
+    let points = []
+    //轨迹上的点列表
+    let lp = []
+    if (pathType === 'line') {
+      lp = this.lineComplete(startPos, endPos, step)
+    } else if (pathType === 'parabola') {
+      lp = this.parabolaComplete(startPos, endPos, step)
+    } else if (pathType === 'custom') {
+      lp = customPoints
+    }
+    let cp1 = [];
+
+    for (let i = 0; i < lp.length - 1; i++) {
+      let n = MathUtil.vecUnit(lp[i], lp[i + 1])
+      let cp = MathUtil.circleVecPoint(lp[i], r, n, degree)
+      cp1.push(cp);
+      degree += degD;
+    }
+
+    if (add) {
+      points = points.concat(lp);
+    }
+
+    points = points.concat(cp1);
+    return points;
+  },
+  /**
+   * 缓动函数
+   * @param {$Vec3_} startPos 起始点坐标
+   * @param {$Vec3_} endPos 终点坐标
+   * @param {String} type 缓动函数类型
+   * @param {Number} step 步长
+   * @param {$Vec3_[]} 点坐标
+   */
+  EasingComplete: function (startPos, endPos, type, step) {
+    let points = []
+    let [x, y, z] = MathUtil.vec3ToArray(startPos)
+    let [x1, y1, z1] = MathUtil.vec3ToArray(startPos)
+    let [x2, y2, z2] = MathUtil.vec3ToArray(endPos)
+
+    let d = startPos.distanceTo(endPos)
+
+    // 计算需要的粒子数
+    let count = Math.floor(d / step)
+
+    for (let i = 0; i < count; i++) {
+      points.push($Vec3(x, y, z))
+      //计算当前点的缓动比例（0到1）
+      let t = i / (count - 1)
+      let t_eased
+      switch (type) {
+        case this.Easing.easeInOutSine:
+          t_eased = -(Math.cos(KMath.PI * t) - 1) / 2
+          break
+        case this.Easing.easeInSine:
+          t_eased = 1 - Math.cos((t * KMath.PI) / 2)
+          break
+        case this.Easing.easeOutSine:
+          t_eased = Math.sin((t * KMath.PI) / 2)
+          break
+        default:
+          console.error('传入类型有误')
+          return
+      }
+      x = x1 + (x2 - x1) * t_eased
+      y = y1 + (y2 - y1) * t_eased
+      z = z1 + (z2 - z1) * t_eased
+    }
+    return points
+  },
+  /**
+   * 模拟雷电的轨迹
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {Number} step 粒子之间的距离
+   * @param {Number} random 一个放大雷电路径随机性的系数 值越大随机性越大 默认0.7
+   * @return {$Vec3_[]}
+   */
+  lightningComplete: function (startPos, endPos, step, random) {
+    random = random === undefined ? 0.7 : random
+    let [x1, y1, z1] = MathUtil.vec3ToArray(startPos)
+    let [x2, y2, z2] = MathUtil.vec3ToArray(endPos)
+    let points = []
+    let nx, ny, nz
+    // 创建一个栈来存储待处理的线段
+    let stack = [[x1, y1, z1, x2, y2, z2]]
+
+    while (stack.length > 0) {
+      let [x1, y1, z1, x2, y2, z2] = stack.pop()
+
+      points.push($Vec3(x1, y1, z1))
+
+      // 计算两个端点之间的差值
+      let dx = Math.abs(x1 - x2),
+        dy = Math.abs(y1 - y2),
+        dz = Math.abs(z1 - z2),
+        delta = (dx + dy + dz) / 3
+
+      if (Math.abs(x1 - x2) + Math.abs(y1 - y2) + Math.abs(z1 - z2) > step) {
+        nx = (x1 + x2) / 2 + (Math.random() - 0.5) * delta * random
+        ny = (y1 + y2) / 2 + (Math.random() - 0.5) * delta * random
+        nz = (z1 + z2) / 2 + (Math.random() - 0.5) * delta * random
+        // 将新的线段加入栈中
+        stack.push([x1, y1, z1, nx, ny, nz])
+        stack.push([nx, ny, nz, x2, y2, z2])
+      }
+    }
+    return points
+  },
+
+  //图形
+
+  /**
+   * 正多边形粒子特效 完整方法
+   * @param {$Vec3_} pos
+   * @param {Number} n 边数
+   * @param {Number} r 边长
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  polygonComplete: function (pos, n, r, step) {
+    let apexes = MathUtil.polygonApex(pos, n, r)
+    return this.lineLinkComplete(apexes, step)
+  },
+
+  /**
+   * 正三角形 完整方法
+   * @param {$Vec3_} pos
+   * @param {Number} sideLength
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  regularTriangleComplete: function (pos, sideLength, step) {
+    let [x0, y0, z0] = MathUtil.vec3ToArray(pos)
+    let points = []
+    let r = sideLength / (2 * Math.sin(KMath.PI / 3))
+    points = points.concat(this.lineComplete($Vec3(x0 - sideLength / 2, y0, z0 - r * Math.sin(KMath.PI / 6)), $Vec3(x0, y0, z0 + r), step))
+    points = points.concat(this.lineComplete($Vec3(x0, y0, z0 + r), $Vec3(x0 + sideLength / 2, y0, z0 - r * Math.sin(KMath.PI / 6)), step))
+    points = points.concat(this.lineComplete($Vec3(x0 + sideLength / 2, y0, z0 - r * Math.sin(KMath.PI / 6)), $Vec3(x0 - sideLength / 2, y0, z0 - r * Math.sin(KMath.PI / 6)), step))
+    return points
+  },
+
+  /**
+   * 椭圆 完整方法
+   * @param {$Vec3_} pos
+   * @param {Number} a 长轴
+   * @param {Number} b 短轴
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  ellipseComplete: function (pos, a, b, step) {
+    let [x0, y, z0] = MathUtil.vec3ToArray(pos)
+    let points = []
+    let l = 2 * KMath.PI * b + 4 * (a - b)
+    let count = Math.floor(l / step)
+    for (let i = 0; i <= count; i++) {
+      let x = x0 + a * Math.cos(2 * KMath.PI * (i / count))
+      let z = z0 + b * Math.sin(2 * KMath.PI * (i / count))
+      points.push($Vec3(x, y, z))
+    }
+    return points
+  },
+
+  /**
+   * 矩形 完整方法
+   * @param {$Vec3_} pos
+   * @param {Number} a
+   * @param {Number} b
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  rectangleComplete: function (pos, a, b, step) {
+    let [x0, y, z0] = MathUtil.vec3ToArray(pos)
+    let points = []
+    points = points.concat(this.lineComplete($Vec3(x0 - (a / 2), y, z0 + (b / 2)), $Vec3(x0 + (a / 2), y, z0 + (b / 2)), step))
+    points = points.concat(this.lineComplete($Vec3(x0 + (a / 2), y, z0 + (b / 2)), $Vec3(x0 + (a / 2), y, z0 - (b / 2)), step))
+    points = points.concat(this.lineComplete($Vec3(x0 + (a / 2), y, z0 - (b / 2)), $Vec3(x0 - (a / 2), y, z0 - (b / 2)), step))
+    points = points.concat(this.lineComplete($Vec3(x0 - (a / 2), y, z0 - (b / 2)), $Vec3(x0 - (a / 2), y, z0 + (b / 2)), step))
+    return points
+  },
+  /**
+   * 圆形的粒子 完整版
+   * @param {$Vec3_} circleVecPointPos 圆心
+   * @param {Number} r 半径
+   * @param {$Vec3_} normalVector 法向量 默认为Vec3(0,1,0)
+   * @param {Number} step 步长
+   * @returns {$Vec3_[]}
+   */
+  circleComplete: function (circleVecPointPos, r, normalVector, step) {
+    //默认数值
+    normalVector = normalVector === undefined ? $Vec3(0, 1, 0) : normalVector
+
+    let d = KMath.PI * 2 * r;
+    let count = Math.floor(d / step);
+    let points = []
+    for (let i = 0; i <= count; i++) {
+      let angle = (KMath.PI * 2 * (i / count));
+      let point = MathUtil.circleVecPoint(circleVecPointPos, r, normalVector, angle)
+      points.push(point)
+    }
+    return points
+  },
+  /**
+   * soma3 注意这是一个平面的粒子绘画 所以无论是点坐标还是圆心坐标y轴的值都是一样的
+   * @param {$Vec3_[]} points 所有要连接的点坐标
+   * @param {$Vec3_} circleVecPointPos 第一个圆心
+   * @param {Boolean} way 方向 true表示逆时针 false表示顺时针
+   * @returns {$Vec3_[]}
+   */
+  soma3Complete: function (points, circleVecPointPos, way) {
+    points = MathUtil.vec3ToArray(points)
+    //圆心坐标
+    let list = []
+    let result = []
+    let [x0, y, z0] = MathUtil.vec3ToArray(circleVecPointPos)
+    list.push($Vec2(x0, z0))
+
+    for (let i = 1; i < points.length - 1; i++) {
+      let [x1, y1, z1] = points[i]
+      let [x2, y2, z2] = points[i + 1]
+      let [a0, b0, c0] = MathUtil.midPerpendicular(x1, z1, x2, z2)
+      let [a1, b1, c1] = MathUtil.lines(x0, z0, x1, z1)
+
+      if (x0 === null || z0 === null) {
+        console.error("输入的坐标或者圆心有误,请重新输入")
+        return
+      }
+      x0 = MathUtil.getIntersectionPoint(a0, b0, c0, a1, b1, c1).x
+      z0 = MathUtil.getIntersectionPoint(a0, b0, c0, a1, b1, c1).y
+      list.push($Vec2(x0, z0))
+    }
+    let n = 0
+    for (let i = 0; i < points.length - 1; i++) {
+      let x1 = points[i][0] - list[i].x
+      let z1 = points[i][2] - list[i].y
+      let x2 = points[i + 1][0] - list[i].x
+      let z2 = points[i + 1][2] - list[i].y
+      let r1 = Math.sqrt(x1 * x1 + z1 * z1)
+
+      result = result.concat(this.soma($Vec3(x1, y, z1), $Vec3(x2, y, z2), list, r1, n, way))
+      if (i < points.length - 2) {
+        let r2_x = points[i + 1][0] - list[i + 1][0]
+        let r2_z = points[i + 1][2] - list[i + 1][1]
+        let r2 = Math.sqrt(r2_x * r2_x + r2_z * r2_z)
+        let oo_x = list[i][0] - list[i + 1][0]
+        let oo_z = list[i][1] - list[i + 1][1]
+        let oo = Math.sqrt(oo_x * oo_x + oo_z * oo_x)
+
+        if (-0.1 <= oo - r1 - r2 <= 0.1) {
+          way = !way
+        }
+      }
+      n += 1
+    }
+    return result
+  },
+  /**
+   * 星形粒子 完整方法
+   * @param {$Vec3_} pos
+   * @param {Number} width
+   * @param {Number} height
+   * @param {Number} t
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  starComplete: function (pos, width, height, t, step) {
+    let points = []
+    for (let i = -t; i < t; i += step) {
+      let x = width * Math.cos(i) * Math.cos(i) * Math.cos(i)
+      let y = height * Math.sin(i) * Math.sin(i) * Math.sin(i)
+      points.push($Vec3(pos.x() + x, pos.y() + y, pos.z()))
+    }
+    return points
+  },
+  /**
+   * 五角星 完整方法
+   * @param {$Vec3_} pos 中心坐标
+   * @param {Number} r 半径
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  fiveStarComplete: function (pos, r, step) {
+    //先计算五角星的5个顶点
+    let apexes = MathUtil.polygonApex(pos, 5, r)
+    //重新排列5个点
+    let points = [apexes[0], apexes[2], apexes[4], apexes[1], apexes[3]]
+
+    return ParticleUtil.lineLinkComplete(points, step)
+  },
+  /**
+   * 字体粒子打印 完整方法
+   * @param {$Vec3_} pos
+   * @param {String} text
+   * @param {Number} angle
+   * @returns {$Vec3_[]}
+   */
+  fontComplete: function (pos, text, angle) {
+    let [x, y, z] = MathUtil.vec3ToArray(pos)
+    let points1 = []
+    for (let index = 0; index < text.length; index++) {
+      let t1 = text.charAt(index)
+
+      let t = dotMatrix[t1].dot
+      let points = []
+      for (let i = 0; i < t.length; i++) {
+        let arr = t[i]
+        for (let j = 0; j < arr.length; j++) {
+          if (arr.charAt(j) === '1') {
+            points.push($Vec3(x - j * 0.2, y - i * 0.2, z))
+          }
+        }
+      }
+      points1 = points1.concat(points)
+      x -= dotMatrix[t1].step
+    }
+    points1 = MathUtil.rotateAllByVec($Vec3(x, y + 1, z), $Vec3(x, y - 1, z), angle, points1)
+    return points1
+  },
+
+  //立体图形
+
+  /**
+   * 正方体粒子特效 完整方法
+   * @param {$Vec3_} pos 左下角坐标
+   * @param {Number} sideLength 边长
+   * @param {$Vec3_} horizontalNormalVector 水平面的法向量 默认$Vec3(1,0,0)
+   * @param {$Vec3_} verticalNormalVector 竖直方向的法向量 默认$Vec3(0,1,0)
+   * @param {Number} step 间隔
+   * @returns {$Vec3_[]}
+   */
+  cubeComplete: function (pos, sideLength, step, horizontalNormalVector, verticalNormalVector) {
+    return this.cuboidComplete(pos, [sideLength, sideLength, sideLength], step, horizontalNormalVector, verticalNormalVector,)
+  },
+
+  /**
+   * 长方体粒子特效 完整方法
+   * @param {$Vec3_} pos 左下角坐标
+   * @param {Number[]} sideLengthList 长宽高
+   * @param {$Vec3_} horizontalNormalVector 水平面的法向量 默认$Vec3(1,0,0)
+   * @param {$Vec3_} verticalNormalVector 竖直方向的法向量 默认$Vec3(0,1,0)
+   * @param {Number} step 间隔
+   * @returns {$Vec3_[]}
+   */
+  cuboidComplete: function (pos, sideLengthList, step, horizontalNormalVector, verticalNormalVector) {
+    //默认数值
+    horizontalNormalVector = horizontalNormalVector === undefined ? $Vec3(1, 0, 0) : horizontalNormalVector
+    verticalNormalVector = verticalNormalVector === undefined ? $Vec3(0, 1, 0) : verticalNormalVector
+
+    // 长 高 宽
+    let a = sideLengthList[0]
+    let b = sideLengthList[1]
+    let c = sideLengthList[2]
+    let [x0, y0, z0] = MathUtil.vec3ToArray(pos)
+    z0 += 0.5
+    x0 -= 0.5
+
+    let relative_p = []
+    relative_p.push(this.lineComplete($Vec3(0, 0, 0), $Vec3(a, 0, 0), step))
+    relative_p.push(this.lineComplete($Vec3(0, 0, 0), $Vec3(0, b, 0), step))
+    relative_p.push(this.lineComplete($Vec3(0, 0, 0), $Vec3(0, 0, c), step))
+    relative_p.push(this.lineComplete($Vec3(a, 0, 0), $Vec3(a, b, 0), step))
+    relative_p.push(this.lineComplete($Vec3(a, 0, 0), $Vec3(a, 0, c), step))
+    relative_p.push(this.lineComplete($Vec3(a, 0, c), $Vec3(a, b, c), step))
+    relative_p.push(this.lineComplete($Vec3(a, 0, c), $Vec3(0, 0, c), step))
+    relative_p.push(this.lineComplete($Vec3(0, 0, c), $Vec3(0, b, c), step))
+    relative_p.push(this.lineComplete($Vec3(0, b, 0), $Vec3(a, b, 0), step))
+    relative_p.push(this.lineComplete($Vec3(0, b, 0), $Vec3(0, b, c), step))
+    relative_p.push(this.lineComplete($Vec3(0, b, c), $Vec3(a, b, c), step))
+    relative_p.push(this.lineComplete($Vec3(a, b, 0), $Vec3(a, b, c), step))
+
+    let p = MathUtil.coordinateTransformation(horizontalNormalVector, verticalNormalVector, relative_p)
+
+    let points = []
+    p.forEach(itm => {
+      let point = [x0, y0, z0].map((value, index) => value + itm[index])
+      points.push(MathUtil.arrayToVec3(point))
+    })
+    return points
+  },
+
+  /**
+   * 正多边形的棱锥 完整方法
+   * @param {$Vec3_} pos 中心点
+   * @param {Number} n 边数
+   * @param {Number} r 半径
+   * @param {Number} h 高度
+   * @param {Number} step
+   * @returns {$Vec3_[]}
+   */
+  regularPyramidComplete: function (pos, n, r, h, step) {
+    let apexes = MathUtil.polygonApex(pos, n, r, step);
+    let points = this.lineLinkComplete(apexes, step);
+    points = this.mergeParticleArray([this.lineLinkOneToNComplete($Vec3(pos.x(), pos.y() + Number(h), pos.z()), apexes, step), points])
+    return points;
+  },
+
+  /**
+   * 球的粒子特效 完整方法
+   * @param {$Vec3_} circleVecPointPos 圆心坐标
+   * @param {Number} r 半径
+   * @param {Number} step 间隔
+   * @param {String} type 生成类型 up or down 默认up
+   * @returns {$Vec3_[]}
+   */
+  ballComplete: function (circleVecPointPos, r, step, type) {
+    type = type === undefined ? 'up' : type
+    let [x, y, z] = MathUtil.vec3ToArray(circleVecPointPos)
+    let points = this.circleComplete(circleVecPointPos, r, $Vec3(0, 0, 1), step)
+    let ballPoints = []
+    points = points.slice(points.length / 2, points.length)
+    for (let i = 0; i < 360; i += 10) {
+      ballPoints.push(MathUtil.vec3ToArray(MathUtil.rotateAllByVec($Vec3(x, y + 1, z), $Vec3(x, y - 1, z), i, points)))
+    }
+    let points1 = []
+    let numCols = this.getMaxColumnLength(ballPoints)
+    if (type === 'up') {
+      //从下往上
+      for (let i = 0; i < numCols; i++) {
+        for (let j = 0; j < ballPoints.length; j++) {
+          if (ballPoints[j][i] !== undefined) points1.push(MathUtil.arrayToVec3(ballPoints[j][i]))
+        }
+      }
+    } else if (type === 'down') {
+      //从上往下
+      for (let i = numCols; i >= 0; i--) {
+        for (let j = 0; j < ballPoints.length; j++) {
+          if (ballPoints[j][i] !== undefined) points1.push(MathUtil.arrayToVec3(ballPoints[j][i]))
+        }
+      }
+    }
+
+    return points1
+  },
+  /**
+   * 椭球体完整方法
+   * @param {$Vec3_} pos 中心坐标
+   * @param {Number[]} radius 半径 分别是X轴Y轴Z轴的半径
+   * @param {Number} space 间隔
+   * @returns {$Vec3_[]}
+   */
+  ellipsoidComplete: function (pos, radius, space) {
+    let [radiusX, radiusY, radiusZ] = radius
+    let points = [];
+
+    // 没必要计算
+    if ((radiusY === 0 && radiusZ === 0) || (radiusX === 0 && radiusZ === 0) || (radiusX === 0 && radiusY === 0)) {
+      return MathUtil.vec3ToArray(pos)
+    }
+    if (radiusX === 0) {
+      return MathUtil.ellipsoidalSurface(pos, radiusY, radiusZ, space, 0)
+    }
+    if (radiusY === 0) {
+      return MathUtil.ellipsoidalSurface(pos, radiusX, radiusZ, space, 1)
+    }
+    if (radiusZ === 0) {
+      return MathUtil.ellipsoidalSurface(pos, radiusX, radiusY, space, 2)
+    }
+
+    // 生成椭球体
+    // 根据给定的间隔值生成椭球体表面上的点
+    for (let theta = 0; theta <= KMath.PI; theta += space) { // 0到PI之间的间隔
+      for (let phi = 0; phi < 2 * KMath.PI; phi += space) { // 0到2PI之间的间隔
+        // 使用椭球参数方程
+        let x = pos.x() + radiusX * Math.sin(theta) * Math.cos(phi)
+        let y = pos.y() + radiusY * Math.sin(theta) * Math.sin(phi)
+        let z = pos.z() + radiusZ * Math.cos(theta)
+
+        // 加入小偏移量
+        let selfSpace = space / 2;
+        let randomX = Math.random() * space - selfSpace
+        let randomY = Math.random() * space - selfSpace
+        let randomZ = Math.random() * space - selfSpace
+
+        // 将计算得到的点添加到列表中
+        points.push($Vec3(x + randomX, y + randomY, z + randomZ))
+      }
+    }
+
+    return points
+  },
+
+  //寻路
+
+  /**
+   * 寻路粒子(A*) 多个点
+   * @param {$Vec3_[]} pathNodes
+   * @returns {$Vec3_[]}
+   */
+  allPathFinder: function (pathNodes) {
+    let path = []
+    for (let i = 0; i < pathNodes.length - 1; i++) {
+      let pathNode1 = pathNodes[i]
+      let pathNode2 = pathNodes[i + 1]
+      path = path.concat(this.pathFinder(pathNode1, pathNode2))
+    }
+    return path;
+  },
+  /**
+   * 寻路粒子(A*) 2个点
+   * @param {$Vec3_} pathStart
+   * @param {$Vec3_} pathEnd
+   * @returns {$Vec3_[]}
+   */
+  pathFinder: function (pathStart, pathEnd) {
+    for (let i = 0; i < this.PathFinderCache.length; i++) {
+      let path = ParticleUtil.PathFinderCache[i]
+      if (pathStart.equals(path.pathStart) && pathEnd.equals(path.pathEnd)) {
+        return path.path
+      }
+    }
+    const arr1 = [-1.5, 0, 1.5]
+    const arr2 = [-1, 0, 1]
+    //初始化开放列表(存储下一步寻路的坐标节点) 关闭列表(已经走过的坐标节点会被放入其中，用来判断某个坐标节点是否已经走过)
+    let openList = []
+    let closeList = []
+    //将起点坐标放入开放列表
+    let G = 0
+    let H = MathUtil.manhattanDistance3D(pathStart, pathEnd)
+    let F = G + H
+    openList.push({ pos: pathStart, g: G, h: H, f: F, parent: null })
+
+    //如果开放列表不为空
+    while (openList.length > 0) {
+      //取出优先级最高的节点
+      let currentNode = openList.reduce((min, current) => {
+        return current.f < min.f ? current : min
+      }, openList[0])
+
+      let currentPos = currentNode.pos
+      //是否为空
+      if (currentPos === null) {
+        console.error("寻路失败");
+        return
+      }
+      //如果当前坐标与终点坐标相同或者2点距离小于1
+      if (pathEnd.equals(currentPos) || pathEnd.distanceTo(currentPos) < 1) {
+        //回溯节点
+        let totalPath = []
+        totalPath.push(currentNode.pos)
+        currentNode = currentNode.parent
+        while (this.pathFinderArrayIndex(closeList, currentNode.pos)) {
+          totalPath.push(currentNode.pos)
+          currentNode = currentNode.parent
+          if (currentNode === null) break
+        }
+        let path = this.piecewiseParticles(totalPath, 0.5)
+        //缓存坐标
+        this.PathFinderCache.push({ pathStart: pathStart, pathEnd: pathEnd, path: path })
+        //返回结果路径
+        return path
+      }
+      //不是终点 则将当前坐标放入关闭列表 并从开放列表中删除
+      closeList.push(currentNode)
+      openList.splice(openList.indexOf(currentNode), 1)
+
+      //遍历周围节点
+      arr1.forEach(dy => {
+        arr2.forEach(dx => {
+          arr2.forEach(dz => {
+            if (dx !== 0 || dy !== 0 || dz !== 0) {
+              let neighbor = currentPos.add($Vec3(dx, dy, dz))
+              // 如果这个点没走过且这个节点能通行 除非是终点
+              if ((!this.pathFinderArrayIndex(closeList, neighbor) && this.isWalkable(neighbor)) || pathEnd.equals(neighbor) || pathEnd.distanceTo(neighbor) < 1) {
+                //将节点放入开放列表
+                let G = currentNode.g + 1
+                let H = MathUtil.manhattanDistance3D(neighbor, pathEnd)
+                let F = G + H
+
+                let data = { pos: neighbor, g: G, h: H, f: F, parent: currentNode }
+
+                if (!this.pathFinderArrayIndex(openList, neighbor)) {
+                  openList.push(data)
+                }
+              }
+            }
+          })
+        })
+      })
+    }
+
+    //寻路失败
+    console.error('寻路失败');
+    return []
+  },
+
+  //工具
+
+  /**
+   * soma
+   * @param {$Vec3_} pos1
+   * @param {$Vec3_} pos2
+   * @param {$Vec2_[]} list 圆心坐标数组
+   * @param {Number} r
+   * @param {Number} n
+   * @param {Boolean} way true表示顺时针 false表示逆时针
+   * @returns {$Vec3_[]}
+   */
+  soma: function (pos1, pos2, list, r, n, way) {
+    let [x1, y, z1] = MathUtil.vec3ToArray(pos1)
+    let [x2, y1, z2] = MathUtil.vec3ToArray(pos2)
+    if (y !== y1) {
+      console.error("soma3曲线要求y轴是一致的")
+      return
+    }
+    let points = []
+
+    // 计算极坐标角度
+    let Ra = Math.atan2(z1, x1)
+    let Rb = Math.atan2(z2, x2)
+    let Da = MathUtil.toDegrees(Ra)
+    let Db = MathUtil.toDegrees(Rb)
+    let c = Math.abs(Da - Db)
+    if (way) {
+      if (Da > Db) {
+        c = 360 - c
+        for (let i = Da; i <= Da + c; i++) {
+          let rad = MathUtil.toRadians(i)
+          let xi = r * Math.cos(rad) + parseFloat(list[n].x)
+          let zi = r * Math.sin(rad) + parseFloat(list[n].y)
+          points.push($Vec3(xi, y, zi))
+        }
+      } else {
+        for (let i = Da; i <= Da + c; i++) {
+          let rad = MathUtil.toRadians(i)
+          let xi = r * Math.cos(rad) + parseFloat(list[n].x)
+          let zi = r * Math.sin(rad) + parseFloat(list[n].y)
+          points.push($Vec3(xi, y, zi))
+        }
+      }
+    } else {
+      if (Da > Db) {
+        c = 360 - c
+        for (let i = Da; i >= Da - c; i--) {
+          let rad = MathUtil.toRadians(i)
+          let xi = r * Math.cos(rad) + parseFloat(list[n].x)
+          let zi = r * Math.sin(rad) + parseFloat(list[n].y)
+          points.push($Vec3(xi, y, zi))
+        }
+      } else {
+        for (let i = Da; i >= Da - c; i--) {
+          let rad = MathUtil.toRadians(i)
+          let xi = r * Math.cos(rad) + parseFloat(list[n].x)
+          let zi = r * Math.sin(rad) + parseFloat(list[n].y)
+          points.push($Vec3(xi, y, zi))
+        }
+      }
+    }
+    return points
+  },
+  /**
+   * 合并粒子数组
+   * @param {Array} arrays 超大的数组 数组里是多个粒子数组
+   * @returns {Array}
+   */
+  mergeParticleArray: function (arrays) {
+    let mergedArray = []
+
+    arrays.forEach(arr => {
+      mergedArray = mergedArray.concat(arr)
+    });
+
+    return mergedArray;
+  },
+  /**
+   * 获取二维数组中最长的一列
+   * @param {Number[][]} arr
+   * @returns {Number}
+   */
+  getMaxColumnLength: function (arr) {
+    let maxColLength = 0;
+
+    arr.forEach(row => {
+      maxColLength = Math.max(maxColLength, row.length);
+    });
+
+    return maxColLength;
+  },
+  /**
+   * 带有颜色的dust粒子
+   * @param {Number} r
+   * @param {Number} g
+   * @param {Number} b
+   * @returns {$DustParticleOptions_} dust粒子的对象
+   */
+  rgbDust: function (r, g, b) {
+    return new $DustParticleOptions(Vec3f(r / 255, g / 255, b / 255), 1)
+  },
+  /**
+   * 带有颜色的dust粒子
+   * @param {Number} r
+   * @param {Number} g
+   * @param {Number} b
+   * @param {Number} a 粒子的大小
+   * @returns {$DustParticleOptions_} dust粒子的对象
+   */
+  rgbaDust: function (r, g, b, a) {
+    return new $DustParticleOptions(Vec3f(r / 255, g / 255, b / 255), a)
+  },
+  /**
+   * 将一个数组的每2个点之间分段 将粒子分的更细
+   * @param {$Vec3_[]} particles
+   * @param {$Vec3_} step
+   * @returns {$Vec3_[]}
+   */
+  piecewiseParticles: function (particles, step) {
+    let arr = []
+    for (let i = 0; i < particles.length - 1; i++) {
+      let p1 = particles[i]
+      let p2 = particles[i + 1]
+      let newParticles = []
+      newParticles = this.lineComplete(p1, p2, step)
+      arr = arr.concat(newParticles)
+    }
+    return arr
+  },
+  /**
+   * 给粒子坐标添加偏移
+   * @param {$Vec3_[]} arr
+   * @param {Number} offsetRange 偏移量
+   * @param {Boolean} shouldOffsetY Y轴坐标是否要偏移
+   * @returns {$Vec3_[]}
+   */
+  randomOffset: function (arr, offsetRange, shouldOffsetY) {
+    return arr.map(vec3 => {
+      const offsetX = (Math.random() * offsetRange) - (offsetRange / 2)
+      const offsetY = shouldOffsetY ? (Math.random() * offsetRange) - (offsetRange / 2) : 0
+      const offsetZ = (Math.random() * offsetRange) - (offsetRange / 2)
+      return vec3.add($Vec3(offsetX, offsetY, offsetZ));
+    })
+  },
+  /**
+   * 寻路算法中判断该位置是否被记录过
+   * @param {any[][]} arr
+   * @param {$Vec3_} pos
+   * @returns {Boolean}
+   */
+  pathFinderArrayIndex(arr, pos) {
+    return arr.some(item => item.pos.equals(pos));
+  },
+  /**
+   * 是否可以行走
+   * @param {$Vec3_} pos
+   * @param {$Level} level 生成的世界 默认为主世界
+   */
+  isWalkable: function (pos, level) {
+    level = level === undefined ? getServer().getLevel('minecraft:overworld') : level
+    let pos1 = BlockPos.containing(pos)
+    let pos2 = BlockPos.containing(pos.x(), pos.y() + 1, pos.z())
+
+    let blockState1 = level.getBlockState(pos1)
+    let blockState2 = level.getBlockState(pos2)
+
+    return (blockState1.isPathfindable(level, pos1, $PathComputationType.LAND) || blockState1.isPathfindable(level, pos1, $PathComputationType.WATER)) && (blockState2.isPathfindable(level, pos2, $PathComputationType.LAND) || blockState2.isPathfindable(level, pos2, $PathComputationType.WATER));
+  },
+  /**
+   * 根据长度和指定的值 生成一个多段的数组
+   * @param {Number} length
+   * @param {Array} arr
+   * @param {String} type 排序类型(无变化 逆排 无序) none(默认) or reverse or random
+   * @returns {Array}
+   */
+  summonSubArray: function (length, arr, type) {
+    if (arr.length > length) {
+      console.error("要生成的数组的长度大于指定的数组长度")
+      return
+    }
+    type = type === undefined ? 'none' : type
+    let newArr = []
+    while (arr.length) {
+      let count = length / arr.length
+
+      if (count >= 1) {
+        //值多次数少 一次多打印几个值
+        for (let i = 0; i < count; i++) {
+          newArr.push(arr[0])
+          length--
+        }
+        arr.shift()
+      } else {
+        //次数少值多 打印后添加空白
+        count = Math.floor(arr.length / length)
+        newArr.push(arr[0])
+        length--
+        for (let i = 0; i < count; i++) {
+          newArr.push(" ")
+          length--
+        }
+        points.shift()
+      }
+    }
+    if (type === 'reverse') {
+      newArr.reverse()
+    } else if (type === 'random') {
+      newArr = MathUtil.randomArray(newArr)
+    }
+
+    return newArr
+  },
+  /**
+   * 将粒子转成string文本
+   * @param {$ParticleOptions_ | String} particle 
+   */
+  particleToString: function (particle) {
+    if (typeof particle === 'string') {
+      return particle
+    } else if (particle instanceof $DustParticleOptions) {
+      let color = MathUtil.floorPos(particle.getColor(), 1)
+      return `dust{color: [${color.x()}, ${color.y()}, ${color.z()}], scale: ${particle.getScale()}}`
+    }
+  },
+}
+
+//简便调用型粒子特效
+const EasyParticle = {
+  /**
+   * 直线粒子有延时 简略调用版
+   * @param {$Vec3_} startPos 起始坐标
+   * @param {$Vec3_} endPos 结束坐标
+   * @param {Number} step 步长
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  lineDelayed: function (startPos, endPos, step, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.lineComplete(startPos, endPos, step), isShow, tick, particle, lifeTime)
+  },
+
+  /**
+   * 直线粒子无延时 简略调用版
+   * @param {$Vec3_} startPos 起始坐标
+   * @param {$Vec3_} endPos 结束坐标
+   * @param {Number} step 步长
+   * @param {Number} tick 粒子显示的时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  lineNoDelayed: function (startPos, endPos, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.lineComplete(startPos, endPos, step), tick, particle, lifeTime)
+  },
+  /**
+   * 首位相连多个点 简略调用版
+   * @param {$Vec3_[]} point_list
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  lineLink: function (point_list, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.lineLinkComplete(point_list, step), tick, particle, lifeTime)
+  },
+  /**
+   * 一个点连接多个点 简略调用版
+   * @param {$Vec3_} pos - 起始点坐标
+   * @param {$Vec3_[]} pointsList - 点列表
+   * @param {Number} step - 步长
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  lineLinkOneToN: function (pos, pointsList, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.lineLinkOneToNComplete(pos, pointsList, step), tick, particle, lifeTime)
+  },
+  /**
+   * 抛物线粒子有延时 简略调用版
+   * @param {$Vec3_} startPos 起始坐标
+   * @param {$Vec3_} endPos 结束坐标
+   * @param {Number} step 步长
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  parabolaDelayed: function (startPos, endPos, step, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.parabolaComplete(startPos, endPos, step), isShow, tick, particle, lifeTime)
+  },
+
+  /**
+   * 抛物线粒子无延时 简略调用版
+   * @param {$Vec3_} startPos 起始坐标
+   * @param {$Vec3_} endPos 结束坐标
+   * @param {Number} step 步长
+   * @param {Number} tick 粒子显示的时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  parabolaNoDelayed: function (startPos, endPos, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.parabolaComplete(startPos, endPos, step), tick, particle, lifeTime)
+  },
+  /**
+   * 螺线延迟版 简便调用版
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {Number} r
+   * @param {Number} step
+   * @param {String} pathType
+   * @param {$Vec3_[]} customPoints
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  helixDelayed: function (startPos, endPos, r, step, pathType, customPoints, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.helixComplete(startPos, endPos, r, step, 0, pathType, false, 3, customPoints), isShow, tick, particle, lifeTime)
+  },
+  /**
+   * 螺线无延迟版 简便调用版
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {Number} r
+   * @param {Number} step
+   * @param {String} pathType
+   * @param {$Vec3_[]} customPoints
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  helixNoDelayed: function (startPos, endPos, r, step, pathType, customPoints, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.helixComplete(startPos, endPos, r, step, 0, pathType, false, 3, customPoints), tick, particle, lifeTime)
+  },
+  /**
+   * 缓动函数粒子特效 简略调用版
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {String} type
+   * @param {Number} step
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle
+   * @param {Number} lifeTime
+   */
+  Easing: function (startPos, endPos, type, step, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.EasingComplete(startPos, endPos, type, step), isShow, tick, particle, lifeTime)
+  },
+  /**
+   * 模拟雷电路径延时版
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {Number} step
+   * @param {Number} random
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle
+   * @param {Number} lifeTime
+   */
+  lightningDelayed: function (startPos, endPos, step, random, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.lightningComplete(startPos, endPos, step, random), isShow, tick, particle, lifeTime)
+  },
+  /**
+   * 模拟雷电路径无延时版
+   * @param {$Vec3_} startPos
+   * @param {$Vec3_} endPos
+   * @param {Number} step
+   * @param {Number} random
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle
+   * @param {Number} lifeTime
+   */
+  lightningNoDelayed: function (startPos, endPos, step, random, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.lightningComplete(startPos, endPos, step, random), tick, particle, lifeTime)
+  },
+  /**
+   * 正多边形粒子特效 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} n
+   * @param {Number} r
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  polygon: function (pos, n, r, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.polygonComplete(pos, n, r, step), tick, particle, lifeTime)
+  },
+  /**
+   * 正三角形 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} sideLength
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  regularTriangle: function (pos, sideLength, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.regularTriangleComplete(pos, sideLength, step), tick, particle, lifeTime)
+  },
+  /**
+   * 椭圆 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} a 长轴
+   * @param {Number} b 短轴
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  ellipse: function (pos, a, b, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.ellipseComplete(pos, a, b, step), tick, particle, lifeTime)
+  },
+  /**
+   * 矩形 简便调用版
+   * @param {$Vec3_} pos
+   * @param {Number} a
+   * @param {Number} b
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  rectangle: function (pos, a, b, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.rectangleComplete(pos, a, b, step), tick, particle, lifeTime)
+  },
+  /**
+   * 圆形的粒子有延时 简略调用版
+   * @param {$Vec3_} circleVecPointPos 圆心
+   * @param {Number} r 半径
+   * @param {$Vec3_} normalVector 法向量  默认为$Vec3(0,1,0)
+   * @param {Number} step 步长
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  circleDelayed: function (circleVecPointPos, r, normalVector, step, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.circleComplete(circleVecPointPos, r, normalVector, step), isShow, tick, particle, lifeTime)
+  },
+
+  /**
+   * 圆形的粒子无延时 简略调用版
+   * @param {$Vec3_} circleVecPointPos 圆心
+   * @param {Number} r 半径
+   * @param {$Vec3_} normalVector 法向量  默认为$Vec3(0,1,0)
+   * @param {Number} step 步长
+   * @param {Number} tick 粒子显示的时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  circleNoDelayed: function (circleVecPointPos, r, normalVector, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.circleComplete(circleVecPointPos, r, normalVector, step), tick, particle, lifeTime)
+  },
+  /**
+   * soma3的粒子有延时 简略调用版
+   * @param {$Vec3_[]} points 点坐标
+   * @param {$Vec3_} circleVecPointPos 圆心
+   * @param {Boolean} way 方向 true表示逆时针 false表示顺时针
+   * @param {Boolean} isShow 是否展示过去坐标
+   * @param {Number} tick 粒子显示的时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  soma3Delayed: function (points, circleVecPointPos, way, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.soma3Complete(points, circleVecPointPos, way), isShow, tick, particle, lifeTime)
+  },
+  /**
+   * soma3的粒子无延时 简略调用版
+   * @param {$Vec3_[]} points 点坐标
+   * @param {$Vec3_} circleVecPointPos 圆心
+   * @param {Boolean} way 方向 true表示逆时针 false表示顺时针
+   * @param {Number} tick 粒子显示的时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  soma3NoDelayed: function (points, circleVecPointPos, way, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.soma3Complete(points, circleVecPointPos, way), tick, particle, lifeTime)
+  },
+  /**
+   * 字体粒子打印 简单调用型
+   * @param {$Vec3_} pos
+   * @param {String} text
+   * @param {Number} angle
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  font: function (pos, text, angle, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.fontComplete(pos, text, angle), tick, particle, lifeTime)
+  },
+  /**
+   * 星星粒子 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} width
+   * @param {Number} height
+   * @param {Number} t 紧凑程度
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  star: function (pos, width, height, t, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.starComplete(pos, width, height, t, step), tick, particle, lifeTime)
+  },
+  /**
+   * 五角星无延时 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} r
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  fiveStarNoDelayed: function (pos, r, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.fiveStarComplete(pos, r, step), tick, particle, lifeTime)
+  },
+  /**
+   * 五角星有延时 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} r
+   * @param {Number} step
+   * @param {Boolean} isShow
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  fiveStarDelayed: function (pos, r, step, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.fiveStarComplete(pos, r, step), isShow, tick, particle, lifeTime)
+  },
+  /**
+   * 彩色粒子画 完整版 注：图片像素推荐64*64 太大会导致mc卡顿
+   * @param {String} fileName 文件名 图片放到kubejs/assets/kubejs/textures/img 文件夹下
+   * @param {$Vec3_} pos 图片左上角坐标
+   * @param {Number} size 粒子大小 默认1
+   * @param {Number} step 粒子间距 默认0.2
+   * @param {Number} tick
+   */
+  colorParticleImg: function (fileName, pos, size, step, tick) {
+    const res = ParticleUtil.colorParticleImgComplete(fileName, pos, size, step)
+
+    ParticleUtil.drawParticleNoDelayed(res[0], tick, res[1], -1)
+  },
+  /**
+   * 正方体粒子特效 简略调用版
+   * @param {$Vec3_} pos 中心坐标
+   * @param {Number} sideLength 边长
+   * @param {Number} step 间隔
+   * @param {Number} tick 显示时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  cube: function (pos, sideLength, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.cuboidComplete(pos, [sideLength, sideLength, sideLength], step, $Vec3(1, 0, 0), $Vec3(0, 1, 0)), tick, particle, lifeTime)
+  },
+  /**
+   * 长方体粒子特效 简略调用版
+   * @param {$Vec3_} pos 中心坐标
+   * @param {Number[]} sideLengthList 边长
+   * @param {Number} step 间隔
+   * @param {Number} tick 显示时长
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  cuboid: function (pos, sideLengthList, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.cuboidComplete(pos, [sideLengthList[0], sideLengthList[1], sideLengthList[2]], step, $Vec3(1, 0, 0), $Vec3(0, 1, 0)), tick, particle, lifeTime)
+  },
+  /**
+   * 正多边形的棱锥 简略调用版
+   * @param {$Vec3_} pos
+   * @param {Number} n 边数
+   * @param {Number} r 半径
+   * @param {Number} h 高度
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  regularPyramid: function (pos, n, r, h, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.mergeParticleArray(ParticleUtil.regularPyramidComplete(pos, n, r, h, step)), tick, particle, lifeTime)
+  },
+  /**
+   * 球的粒子特效无延时 简略调用版
+   * @param {$Vec3_} circleVecPointPos
+   * @param {Number} r
+   * @param {Number} step
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  ballNoDelayed: function (circleVecPointPos, r, step, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.ballComplete(circleVecPointPos, r, step, null), tick, particle, lifeTime)
+  },
+  /**
+   * 球的粒子特效有延时 简略调用版
+   * @param {$Vec3_} circleVecPointPos
+   * @param {Number} r
+   * @param {Number} step
+   * @param {String} type 生成类型 up or down 默认up
+   * @param {Boolean} isShow
+   * @param {tick} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  ballDelayed: function (circleVecPointPos, r, step, type, isShow, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleDelayed(ParticleUtil.ballComplete(circleVecPointPos, r, step, type), isShow, tick, particle, lifeTime)
+  },
+  /**
+   * 椭球体 简单调用版
+   * @param {$Vec3_} pos
+   * @param {Number} radius
+   * @param {Number} space
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  ellipsoid: function (pos, radius, space, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.ellipsoidComplete(pos, radius, space), tick, particle, lifeTime)
+  },
+  /**
+   * A*寻路粒子 简略调用版
+   * @param {$Vec3_[]} pathNodes
+   * @param {Number} tick
+   * @param {$ParticleOptions | $ParticleOptions[] | String | String[]} particle 粒子效果 默认end_rod*} particle
+   * @param {Number} lifeTime 粒子的生命周期,-1则表示按照原本粒子的生命周期,默认为-1
+   */
+  pathFinder: function (pathNodes, tick, particle, lifeTime) {
+    ParticleUtil.drawParticleNoDelayed(ParticleUtil.allPathFinder(pathNodes), tick, particle, lifeTime)
+  }
+}
+
+//小写字母和数字的点阵
+const dotMatrix = {
+  '0': {
+    dot: [
+      '00111100',
+      '01000010',
+      '01000010',
+      '01000010',
+      '01000010',
+      '01000010',
+      '00111100'
+    ],
+    step: '1.6'
+  },
+  '1': {
+    dot: [
+      '0011000',
+      '0001000',
+      '0001000',
+      '0001000',
+      '0001000',
+      '0001000',
+      '0111110'
+    ],
+    step: '1.4'
+  },
+  '2': {
+    dot: [
+      '0111110',
+      '0000010',
+      '0000010',
+      '0111110',
+      '0100000',
+      '0100000',
+      '0111110'
+    ],
+    step: '1.4'
+  },
+  '3': {
+    dot: [
+      '0111110',
+      '0000010',
+      '0000010',
+      '0111110',
+      '0000010',
+      '0000010',
+      '0111110'
+    ],
+    step: '1.4'
+  },
+  '4': {
+    dot: [
+      '1010000',
+      '1010000',
+      '1010000',
+      '1111100',
+      '0010000',
+      '0010000',
+      '0010000'
+    ],
+    step: '1.4'
+  },
+  '5': {
+    dot: [
+      '1000000',
+      '1111100',
+      '1000000',
+      '1111100',
+      '0000100',
+      '0000100',
+      '1111100'
+    ],
+    step: '1.4'
+  },
+  '6': {
+    dot: [
+      '1111100',
+      '1000000',
+      '1000000',
+      '1111100',
+      '1000100',
+      '1000100',
+      '1111100'
+    ],
+    step: '1.4'
+  },
+  '7': {
+    dot: [
+      '0111110',
+      '0000010',
+      '0000010',
+      '0000010',
+      '0000010',
+      '0000010',
+      '0000010'
+    ],
+    step: '1.4'
+  },
+  '8': {
+    dot: [
+      '1111110',
+      '1000010',
+      '1000010',
+      '1111110',
+      '1000010',
+      '1000010',
+      '1111110'
+    ],
+    step: '1.4'
+  },
+  '9': {
+    dot: [
+      '1111110',
+      '1000010',
+      '1000010',
+      '1111110',
+      '0000010',
+      '0000010',
+      '1111110'
+    ],
+    step: '1.4'
+  },
+  a: {
+    dot: [
+      '0000000', '0111110',
+      '0000001', '0000001',
+      '0111111', '1000001',
+      '1000001', '0111111'
+    ],
+    step: '1.6'
+  },
+  b: {
+    dot: [
+      '0000000', '1000000',
+      '1000000', '1011110',
+      '1100001', '1000001',
+      '1100001', '1011110'
+    ],
+    step: '1.4'
+  },
+  c: {
+    dot: [
+      '0000000', '0000000',
+      '0000000', '0011111',
+      '0100000', '0100000',
+      '0100000', '0011111'
+    ],
+    step: '1.4'
+  },
+  d: {
+    dot: [
+      '0000001', '0000001',
+      '0000001', '0011111',
+      '0100001', '0100001',
+      '0100001', '0011111'
+    ],
+    step: '1.4'
+  },
+  e: {
+    dot: [
+      '0000000', '0000000',
+      '0000000', '0011110',
+      '0100001', '0111111',
+      '0100000', '0011110'
+    ],
+    step: '1.4'
+  },
+  f: {
+    dot: [
+      '000000', '000110',
+      '001001', '001000',
+      '011100', '001000',
+      '001000', '001000'
+    ],
+    step: '1.2'
+  },
+  g: {
+    dot: [
+      '000000', '000000',
+      '011111', '100001',
+      '100001', '011111',
+      '000001', '011110'
+    ],
+    step: '1.2'
+  },
+  h: {
+    dot: [
+      '000000', '010000',
+      '010000', '010110',
+      '011001', '010001',
+      '010001', '010001'
+    ],
+    step: '1.2'
+  },
+  i: {
+    dot: [
+      '00000', '00010',
+      '00000', '00110',
+      '00010', '00010',
+      '00010', '00111'
+    ],
+    step: '1.0'
+  },
+  j: {
+    dot: [
+      '00000', '00001',
+      '00000', '00011',
+      '00001', '00001',
+      '00001', '00111'
+    ],
+    step: '1.0'
+  },
+  k: {
+    dot: [
+      '00000', '01000',
+      '01000', '01001',
+      '01010', '01100',
+      '01010', '01001'
+    ],
+    step: '1.0'
+  },
+  l: {
+    dot: [
+      '0000', '0100',
+      '0100', '0100',
+      '0100', '0100',
+      '0101', '0010'
+    ],
+    step: '0.8'
+  },
+  m: {
+    dot: [
+      '0000000', '0000000',
+      '0000000', '0111110',
+      '1001001', '1001001',
+      '1001001', '1001001'
+    ],
+    step: '1.4'
+  },
+  n: {
+    dot: [
+      '000000', '000000',
+      '000000', '011110',
+      '010001', '010001',
+      '010001', '010001'
+    ],
+    step: '1.2'
+  },
+  o: {
+    dot: [
+      '0000000', '0000000',
+      '0000000', '0011110',
+      '0100001', '0100001',
+      '0100001', '0011110'
+    ],
+    step: '1.4'
+  },
+  p: {
+    dot: [
+      '000000', '011110',
+      '010001', '010001',
+      '011110', '010000',
+      '010000', '010000'
+    ],
+    step: '1.2'
+  },
+  q: {
+    dot: [
+      '00000', '01111',
+      '10001', '10001',
+      '01111', '00001',
+      '00001', '00001'
+    ],
+    step: '1.0'
+  },
+  r: {
+    dot: [
+      '000000', '000000',
+      '010110', '011001',
+      '010000', '010000',
+      '010000', '010000'
+    ],
+    step: '1.2'
+  },
+  s: {
+    dot: [
+      '0000000', '0000000',
+      '0000000', '0011110',
+      '0100000', '0011110',
+      '0000001', '0011110'
+    ],
+    step: '1.4'
+  },
+  t: {
+    dot: [
+      '000000', '000100',
+      '000100', '011111',
+      '000100', '000100',
+      '000100', '000010'
+    ],
+    step: '1.2'
+  },
+  u: {
+    dot: [
+      '00000', '00000',
+      '00000', '10010',
+      '10010', '10010',
+      '10010', '11100'
+    ],
+    step: '1.0'
+  },
+  v: {
+    dot: [
+      '000000', '000000',
+      '000000', '000000',
+      '010001', '010001',
+      '001010', '000100'
+    ],
+    step: '1.2'
+  },
+  w: {
+    dot: [
+      '000000', '000000',
+      '000000', '000000',
+      '010101', '010101',
+      '010101', '011111'
+    ],
+    step: '1.2'
+  },
+  x: {
+    dot: [
+      '000000', '000000',
+      '000000', '010001',
+      '001010', '000100',
+      '001010', '010001'
+    ],
+    step: '1.2'
+  },
+  y: {
+    dot: [
+      '000000', '000000',
+      '000000', '010010',
+      '010010', '001110',
+      '000010', '001110'
+    ],
+    step: '1.2'
+  },
+  z: {
+    dot: [
+      '00000', '00000',
+      '00000', '00000',
+      '01111', '00010',
+      '00100', '01111'
+    ],
+    step: '1.0'
+  },
+  ' ': {
+    dot: [],
+    step: 1
+  },
+  "'": {
+    dot: ['11', '11'],
+    step: 0.4
+  }
+}
