@@ -1,0 +1,860 @@
+
+
+
+StartupEvents.registry('entity_type', event => {
+
+    event.create('combat_area', "entityjs:geckolib_projectile")
+        // .immuneTo()//可接受的方块
+        //.canSpawnFarFromPlayer(true)
+        //.clientTrackingRange(20)//实体追踪范围
+        .mobCategory('misc')//实体分类
+        .setRenderType("translucent")//实体呈现类型
+        .sized(1, 1)//碰撞箱大小
+        .modelSize(1, 1)//模型比例
+        .updateInterval(3)//tick更新速率
+        .repositionEntityAfterLoad(true)//加载后重新定位
+        .isPushable(false)//是否可移动
+        .fireImmune(true)//是否免疫火
+        .saves(true)//应序列化其数据
+        .setSummonable(true)//是否可召唤
+        // .setSwimSound("minecraft:entity.generic.swim")//游泳声音
+        //.setSwimSplashSound("minecraft:entity.generic.splash")//游泳飞溅声音
+
+        .mobCategory('projectile')
+
+
+
+        .addAnimationController('exampleController', 1, event => {//动画控制
+
+            //console.log('是否存在camp   ' + areData(event.entity, 'camp'))
+
+            if (event.entity.getRootData().contains("camp")) {
+                if (event.entity.getRootData().getDouble('camp') == 0) {//中立
+                    event.thenLoop('animation.model.grey');
+                } else if (event.entity.getRootData().getDouble('camp') < 0) {//敌对
+                    event.thenLoop('animation.model.red');
+                } else {//友好
+                    event.thenLoop('animation.model.green');
+                }
+
+            } else {
+                event.thenLoop('animation.model.grey');//bug 当打开游戏第二次进入存档时 会使部分动画会刷新 需重新加载区块
+            }
+            // event.thenLoop('move');
+            //event.thenLoop('rotate'); // event.thenPlayAndHold('');
+            return true;
+        })
+        .scaleModelForRender(context => {//模型修改
+            // Define logic to render the entity without changing core logic such as hitbox rendering
+            let { entity, widthScale, heightScale, poseStack, model, isReRender, partialTick, packedLight, packedOverlay } = context
+            //实体、宽度比例、高度比例、姿态堆栈、模型、重新渲染、部分刻度、打包光、打包场景
+            //poseStack.scale(0.7, 0.7, 0.7)
+
+        })
+
+        .tick(entity => {//客户端服务端同时执行
+
+            entity.deltaMovement = new Vec3(0, 0, 0)
+
+            /*
+                         本实体
+                         -max_camp ~ 0 敌对 
+
+                         done 占领后一次性标记
+                         repeat 是否可重复
+                         camp 阵营 浮点数
+                         r 生成半径
+                         max_quantity 最大数量(精英敌人占用更多的数量)
+                         enemy_sample 敌人样例组(字符串类型)
+                         generate_speed 生成速度 每x秒召唤一个
+                         generate 生成计数器
+                         
+                         敌人
+                         camp_entity 被本实体召唤出的标签 
+                         occupy_speed 存储阵营占据速度 浮点数
+                         
+                         玩家 
+                         occupy_speed 存储阵营占据速度 击杀camp_entity会提高该值
+                         camp_move   占领值动画
+                         camp_snow  占领值显示
+                         */
+
+            //entity.getRootData().contains("camp")
+            // let time
+
+            /*
+            流程
+            先给无数据的实体初始化
+            
+            再将实体的服务端数据发送(同步)至客户端(因退出世界客户端数据不保存)
+            
+            对实体数据操作后 再同时保存至客户端和服务端
+            
+            
+            */
+
+
+
+            //灰色 非重复据点被占领后
+
+            //绿色 可重复据点被占领前
+
+            //红色 未被占领
+
+            //初始化 
+            if (!entity.getRootData().contains("done")) {
+                entity.getRootData().putBoolean('done', false)//占领标记
+            }
+            //  if (!entity.getRootData().contains("repeat")) {
+            //      entity.getRootData().putBoolean('repeat', false)//是否为重复
+            //  }
+            if (!entity.getRootData().contains("max_camp")) {
+                entity.getRootData().putDouble('max_camp', 200)//默认最大占领值(包含正负)
+            }
+            if (!entity.getRootData().contains("camp")) {
+                entity.getRootData().putDouble('camp', -200)//初始占领值
+            }
+            if (!entity.getRootData().contains("r") || (areData(entity, 'r') && getData(entity, 'int', 'r') > 128)) {//最大距离
+                entity.getRootData().putInt('r', 10)
+            }
+
+
+
+
+
+            // let repeat = getData(entity, 'boolean', 'repeat')//是否可重复
+
+            let done = getData(entity, 'boolean', 'done')
+
+            let maxCamp = getData(entity, 'double', 'max_camp')
+
+            let camp = getData(entity, 'double', 'camp')//阵营
+
+            let r = getIntData(entity, 'r')//生成半径
+
+            let entitys = exampleData(event, entity, 'camp_entity', r + 64)//获取阵营实体 服务端
+
+            
+             
+            
+            
+            if (entity.server) {//为服务端时  仅在此处修改camp
+                
+                    if (entitys && entitys.length) {//不为false调用length却为false?
+                  entity.server.players.sendData('combat_area', {
+
+                        entity: entity.getId(),
+                        done: done,//给实体
+                        camp: camp,//给实体
+                        max_camp: maxCamp,//给实体
+                        r: r,//给实体
+                        entity_number: entitys.length,
+                    })
+                
+                
+             
+                    } else {
+                    
+                     entity.server.players.sendData('combat_area', {
+
+                        entity: entity.getId(),
+                        done: done,//给实体
+                        camp: camp,//给实体
+                        max_camp: maxCamp,//给实体
+                        r: r,//给实体
+                        entity_number: 0,
+                    })
+                    
+                    
+                    }
+                
+                
+                
+                
+            } else {
+                // console.log('cilent   ' + camp + '  ' + done)
+                // console.log('?   ' + (camp == 0 && getData(entity, 'boolean', 'repeat') && getData(entity, 'boolean', 'done')))
+            }
+
+            if (camp == 0 && !getData(entity, 'boolean', 'repeat') && done) return//排除一次性的阵营
+
+            if (!entity.getRootData().contains("max_quantity")) {
+                entity.getRootData().putInt('max_quantity', 20)
+            }
+            if (!entity.getRootData().contains("enemy_sample")) {
+                entity.getRootData().putString('enemy_sample', 'goblin')//此处添加了默认的实体集合  可在生成时自定义
+            }
+            if (!entity.getRootData().contains("generate_speed")) {
+                entity.getRootData().putInt('generate_speed', 5)//秒生成一次
+            }
+            if (!entity.getRootData().contains("generate")) {
+                entity.getRootData().putInt('generate', 0)
+            } else {
+                let generateTick = getIntData(entity, 'generate')
+
+                let generate_speed = getIntData(entity, 'generate_speed')
+
+                if (generateTick >= 20 * generate_speed) {//最大生成速率
+                    entity.getRootData().putInt('generate', 0)
+                } else {
+                    entity.getRootData().putInt('generate', 1 + generateTick)
+                }
+            }
+
+
+            let max_quantity = getIntData(entity, 'max_quantity')//最大数量(加上权重)
+
+            // let enemy_sample = getIntData(entity, 'enemy_sample')
+
+
+
+            //  let generate_speed = getIntData(entity, 'generate_speed')//生成速度
+
+            let generate = getIntData(entity, 'generate') == 0//是否生成 计速器
+
+
+            let elite = exampleData2(event, entity, 'camp_entity', 'elite', r + 64)//精英
+            let boss = exampleData2(event, entity, 'camp_entity', 'boss', r + 64)//boss
+
+            let extraWeight = 2 * (elite ? elite.length : 0) + 9 * (boss ? boss.length : 0)//额外权重
+
+
+            let weight_quantity = (entitys ? entitys.length : 0) + extraWeight //获取数量(加上权重)
+
+
+            let players = entity.level.getPlayers()
+
+
+            let eligible = example(event, entity, 'minecraft:player', r + 16)//获取在范围内的玩家(在r+16格内)
+
+
+            let sample = enemySample(event, entity)//获取实体样例集合
+
+
+
+
+
+            if (camp < 0 && generate && Math.random() < Math.pow((max_quantity - weight_quantity) / max_quantity, 0.9)) {//生成机制
+
+                let index = Math.floor(Math.random() * sample.length)
+
+                // console.log(sample)
+
+                //console.log(2)
+
+                let summoner = entity.level.createEntity(sample[index])//返回服务端
+
+                summoner.setX(entity.x)
+                summoner.setY(entity.y)//不能设置刷新过远
+                summoner.setZ(entity.z)
+                randomTp(summoner, event, r)
+
+                entity.level.addFreshEntity(summoner)
+
+                setData(summoner, 'string', 'camp_entity', entity.stringUuid)//服务端已添加  存储阵营实体id
+                //不可在实体未添加至世界时使用/\
+
+
+
+                if (getData(entity, 'boolean', 'done') && false) {//当据点被夺回时(且为可重复)  重置玩家速度
+
+                    if (eligible) {
+                        if (false) {//实体为循环时  增加玩家的的占领速度
+                            for (let i = 0; eligible[i]; i++) {
+
+                                eligible[i].getRootData().putInt('occupy_speed', getData(eligible[i], 'double', 'occupy_speed') + 3)//死亡后重置速度
+                            }
+                        } else {//为非循环时 重置玩家占领速度
+
+                            for (let i = 0; eligible[i]; i++) {
+
+                                eligible[i].getRootData().putInt('occupy_speed', 1)//被占领后后重置速度
+                            }
+                        }
+                    }
+                    setData(entity, 'boolean', 'done', false) // entity.getRootData().remove('done')//当被抢夺时删除已被占领标记
+                }
+
+
+            } else if (camp >= 0 && !getData(entity, 'boolean', 'done') && entity.age > 20) {//客户端数据不会保存
+
+                entity.level.createExplosion(entity.x, entity.y, entity.z)//被占领后触发
+                    .strength(1)//
+
+                    .causesFire(false)
+                    .exploder(entity)
+                    .explode()
+
+                
+                setData(entity, 'boolean', 'done', true)//已占领标记
+
+                if (eligible) {
+                    if (false) {//实体为循环时  增加玩家的的占领速度
+                        for (let i = 0; eligible[i]; i++) {
+
+                            eligible[i].getRootData().putInt('occupy_speed', getData(eligible[i], 'double', 'occupy_speed') + 3)//死亡后重置速度
+                        }
+                    } else {//为非循环时 重置玩家占领速度
+
+                        for (let i = 0; eligible[i]; i++) {
+
+                            eligible[i].getRootData().putInt('occupy_speed', 1)//死亡后重置速度
+                        }
+                    }
+                }
+
+            }// 占领后       1-实体数/最大实体数的根号
+
+
+
+
+
+            let campAdd = entitys ? -entitys.length : 0  //怪物占领速度值为负数
+
+            if (eligible) {
+                /*
+                                eligible.forEach(eligibles => {
+                
+                                    setData(eligibles, 'boolean', 'range', true)
+                                })
+                                    */
+                //给范围内的玩家标记 以方便筛选
+
+                for (let i = 0; eligible[i]; i++) {  //setData(players[i], 'double', 'camp_snow', camp / maxCamp)//显示占领条animation //players[i].getRootData().remove('camp_animation')
+
+                    /*
+                                        if (areData(players[i], 'range')) {
+                                        } else {
+                                            //players[i].getRootData().putInt('occupy_speed', 1)//重置占领速度
+                                            players[i].getRootData().remove('camp_snow')
+                                            console.log('删除')
+                                        }
+                    */
+                    /*
+                     if (false) {//entity.server
+                         //条长度
+                         setData(eligible[i], 'double', 'camp_snow', camp / maxCamp)//服务端
+ 
+                         eligible[i].sendData('combat_area', {
+                             value: camp / maxCamp,
+                             name: 'camp_snow',
+                             entity: 0,
+                         })
+ 
+                         //条动画
+                         if (areData(eligible[i], 'camp_move')) {
+ 
+                             let bar_move = Math.min(getData(eligible[i], 'int', 'camp_move') + 1, 100)
+ 
+                             eligible[i].sendData('combat_area', {
+                                 value: bar_move,
+                                 name: 'camp_move',
+                                 entity: 0,
+                             })
+                             setData(eligible[i], 'int', 'camp_move', bar_move)
+                         } else {
+                             eligible[i].sendData('combat_area', {
+                                 value: 0,
+                                 name: 'camp_move',
+                                 entity: 0,//此项无需实体id
+                             })
+                             setData(eligible[i], 'int', 'camp_move', 0)
+                         }
+ 
+                     }//
+ */
+
+
+                    if (!eligible[i].getRootData().contains("occupy_speed")) {
+                        eligible[i].getRootData().putInt('occupy_speed', 1)
+
+                    }//初始化玩家占领速度  还应该给玩家初始化占领速度
+
+                    // setData(eligible[i], 'double', 'camp_snow', camp / maxCamp)//显示占领条
+                    if (areData(eligible[i], 'occupy_speed')) {
+
+                        campAdd += getData(eligible[i], 'double', 'occupy_speed')//加上范围内玩家
+                        //console.log('campadd' + getData(players[i], 'double', 'occupy_speed'))
+                    }
+                    console.log('存在玩家')
+
+
+
+
+                }//
+
+
+                /*
+                                eligible.forEach(eligibles => {
+                                    eligibles.getRootData().remove('range')
+                                })
+                                    */
+                //删除标记
+            }
+
+
+            // console.log('campAdd' + campAdd)
+
+            //  entity.customNameVisible = true
+            // 设置自定义的名称
+            //  entity.customName = Component.green(`camp:${camp}`)
+
+            // campAdd*=10
+
+            if (entity.server && entity.server.tickCount % 10 == 0) {//为服务端时  在此处统一修改camp (服务端 客户端)
+
+                /*
+                                Client.player.paint({
+                
+                                    bossBar15: {//基底
+                                        type: 'text',
+                                        x: 0,
+                                        y: 12,//
+                                        alignX: 'center',
+                                        alignY: 'top',
+                                        w: 182,
+                                        h: 5,
+                                        draw: 'always',
+                                        // scale: 0.5,
+                                        text: '占领值' + camp + '占领速度' + campAdd,//90.9-181.8 * (health / maxHealth-oldHealth)/2+2*(90.9* health / maxHealth - 90.9)
+                                        remove: false
+                                    }
+                                })
+                */
+
+
+
+                if ((camp + campAdd) > maxCamp) {
+                    //console.log('最大')
+                    setData(entity, 'double', 'camp', maxCamp)
+
+                    entity.server.players.sendData('combat_area', {//给所有玩家客户端的实体添加仅做标签判定的nbt(传入的为服务端)
+                        value: maxCamp,//
+                        name: 'camp',
+                        entity: entity.getId(),
+                    })//传客户端 camp
+
+
+                } else if ((camp + campAdd) < -maxCamp) {
+
+                    setData(entity, 'double', 'camp', -maxCamp)
+
+                    entity.server.players.sendData('combat_area', {//给所有玩家客户端的实体添加仅做标签判定的nbt(传入的为服务端)
+                        value: -maxCamp,
+                        name: 'camp',
+                        entity: entity.getId(),
+                    })
+
+                } else if (camp < 0 && camp + campAdd < 0) {//当类型为可重复时  大于0仍可被抢夺  类型为一次性时  大于0便不在可被抢夺 并使camp一直为0
+
+                    setData(entity, 'double', 'camp', camp + campAdd)
+
+                    entity.server.players.sendData('combat_area', {//给所有玩家客户端的实体添加仅做标签判定的nbt(传入的为服务端)
+                        value: camp + campAdd,//需要显示的
+                        name: 'camp',
+                        entity: entity.getId(),
+                    })
+
+                } else if (camp > 0 || camp + campAdd > 0) {//当camp大于0且该实体不可重复抢夺时 camp设置为零
+
+                    setData(entity, 'double', 'camp', 0)
+
+                    entity.server.players.sendData('combat_area', {//给所有玩家客户端的实体添加仅做标签判定的nbt(传入的为服务端)
+                        value: 0,
+                        name: 'camp',
+                        entity: entity.getId(),
+                    })
+                }
+            }
+
+            /// if (time < 0) { entity.kill() }
+
+            //  if (entity.age % 100 != 0) return
+            // console.log('ticked every 100 ticks')
+        })
+
+})
+/*
+                       entity.level.getEntitiesWithin(AABB.of(entity.x - r, entity.y - r - 50, entity.z - r, entity.x + r, entity.y + r + 50, entity.z + r))
+                           .forEach(entitys => {//使用level可获取与调用者同类型的实体(客户端,服务端)
+                               // console.log(entitys)
+                               
+                                                  
+                                                       if (entitys.server) {//确保为服务端
+                                                           entity.server.players.sendData('combat_area', {//给所有玩家客户端的实体添加仅做标签判定的nbt
+                                                               entity: entity.stringUuid,
+                                                               name: 'camp'//做判定
+                                                               //
+                                                           })
+                                                   }
+                              //似乎并不用传输数据 上一个实体需要传输数据是因其需在服务端设置数值  
+                               if (entitys.isLiving() && entitys.isPlayer()) {
+           
+                                   if (areData(entitys, 'occupy_speed')) {
+           
+                                       campAdd += getData(entitys, 'double', 'occupy_speed')//加上范围内玩家
+           
+                                   }
+           
+           
+           
+                                   setData(entitys, 'double', 'camp_snow', camp / maxCamp)//显示占领条
+           
+                               }
+           
+           
+                           })
+            */
+/*
+let campEntityDie = (event) => {//阵营实体死亡事件 
+
+    let entity = event.entity
+
+    let source = event.source
+
+    let player = source.actual
+
+
+    if (areData(entity, 'camp_entity') && isPlayer(event)) {
+
+        let add = areData(entity, 'elite') ? 1.2 : 1
+
+        add = areData(entity, 'boss') ? 1.5 : add
+
+        if (!entity.getRootData().contains("occupy_speed")) {
+            entity.getRootData().putDouble('occupy_speed', 1)//初始占领速度
+        } else {
+            setData(
+                player,
+                'double',
+                'occupy_speed',
+                Math.min(getData(
+                    player,
+                    'double',
+                    'occupy_speed') + add, 10))//增加占领速度
+        }
+    }
+
+
+}
+
+
+let speedWeaken = (player) => {//占领速度衰减  写在tick
+
+
+    if (player.getRootData().contains("occupy_speed")) {
+        setData(
+            player,
+            'double',
+            'occupy_speed',
+            Math.max(getData(
+                player,
+                'double',
+                'occupy_speed') - 0.005, 1))//
+    }
+
+
+
+
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+        .canCollideWith(context => {
+            return false //Some Boolean value determining whether the entity may collid with another
+        })
+ 
+ 
+ 
+ 
+        .render(context => {
+            // Define core logic to render the entity (recommended to use .scaleModelForRender instead)
+            if (context.entity.isBaby()) {
+                return context.poseStack.scale(0.5, 0.5, 0.5); // Scale down if the entity is a baby
+            }
+            return context.poseStack; // Otherwise, keep the default pose stack
+        })
+        .scaleModelForRender(context => {
+            // Define logic to render the entity without changing core logic such as hitbox rendering
+            const { entity, widthScale, heightScale, poseStack, model, isReRender, partialTick, packedLight, packedOverlay } = context
+            if (entity.hurtTime > 0) {
+ 
+                let a = entity.hurtTime
+ 
+                poseStack.scale(1 - a * 0.025, 1 - a * 0.025, 1 - a * 0.025)
+            }
+        })
+ 
+        .setBlockJumpFactor(entity => {
+            // Sets block jump factor returning a float value
+            if (entity.age > 2000) {
+                return 1.3; // Increase jump factor when the entity is old enough
+            }
+            return 1; // Default jump factor
+        })
+      
+ 
+        .animationResource(entity => {
+            // Return different animation resources based on the entity's state
+            // Use information about the LivingEntity provided by the context.
+            /*
+            if (entity.hurtTime > 0) {
+                return // Return some animation path when entity is hurt
+            } else {
+                return //"kubejs:animations/entity/wyrm.animation.json"; // Return Wyrm animation otherwise
+            }
+ 
+            return //"kubejs:animations/entity/ender_eye.animation.json"
+ 
+        })
+            
+        */
+
+
+/*
+.blockSpeedFactor(entity => {
+// Define logic to calculate and return the block speed factor for the entity
+// Use information about the LivingEntity provided by the context.
+const age = entity.age;
+const maxAge = 5000; // Assuming the maximum age is 5000
+
+// Custom logic to calculate block speed factor based on entity's age
+const factor = age < maxAge ? 1.0 : 0.5; // Reduce speed factor for older entities
+return factor;
+})
+
+.canAddPassenger(context => {
+// Define custom logic to determine if a passenger can be added to the entity
+// Use information about the PassengerEntityContext provided by the context.
+// For example, check if the entity is not already carrying too many passengers.
+const maxPassengers = 4; // Assuming a maximum of 4 passengers
+return context.entity.getPassengers().size() < maxPassengers;
+})
+
+
+
+
+.canChangeDimensions(entity => {
+// Define the conditions for the entity to be able to change dimensions
+// Use information about the LivingEntity provided by the context.
+// For example, allow dimension change only for entities with a specific tag.
+return entity.tags.contains("dimension_changer");
+})
+
+
+.canFreeze(entity => {
+// Define conditions for the entity to be able to freeze
+// For example, allow freezing only if the entity is in water.
+return entity.inWater;
+})
+
+.setMaxFallDistance(entity => {
+// Define custom logic to determine the maximum fall distance before taking damage
+// Use information about the LivingEntity provided by the context
+
+return 0; // Default fall distance
+})
+
+
+
+
+.dampensVibrations(entity => {
+// Determine whether the living entity dampens vibrations
+// Return true if the entity dampens vibrations, false otherwise
+// For example, return true if the entity has no gravity.
+return entity.isNoGravity();
+})
+
+
+
+
+
+
+
+.isCurrentlyGlowing(entity => {
+// Define the conditions to check if the entity is currently glowing
+// For example, check if the entity has a regeneration or glowing effect applied
+return entity.hasEffect("minecraft:regeneration") || entity.hasEffect("minecraft:glowing");
+})
+.isFlapping(entity => {
+// Mimics the Ender Dragon's Flapping Behavior
+// Define logic to determine whether the entity is currently flapping
+const flapTime = entity.flapTime; // Current flap time
+const oFlapTime = entity.oFlapTime; // Previous flap time
+
+// Calculate cosine values for the current and previous flap times
+const f = Math.cos(flapTime * 6.2831855);
+const f1 = Math.cos(oFlapTime * 6.2831855);
+
+// Check if the entity is flapping based on cosine values
+return f1 <= -0.3 && f >= -0.3;
+})
+
+
+.isFreezing(entity => {
+// Define the conditions for the entity to start freezing
+// Use information about the LivingEntity provided by the context.
+// Start freezing the entity if they're in the taiga biome and can freeze.
+return entity.level.getBiome(entity.block.pos) == 'minecraft:taiga' && entity.canFreeze();
+})
+
+.isInvulnerableTo(context => {
+// Define conditions for the entity to be invulnerable to the specific type of damage
+// Use information about the DamageContext provided by the context.
+
+// Example condition: Entity is invulnerable to magic damage
+return context.damageSource.isMagic();
+})
+
+
+.mayInteract(context => {
+// Define conditions for the entity to be allowed to interact with the world
+// Use information about the MayInteractContext provided by the context.
+return context.entity.getTags().contains('canInteractWithWorld')
+})
+
+.nextStep(entity => {
+// Define custom logic to calculate the next step distance based on the provided entity.
+const movementSpeed = entity.getTotalMovementSpeed(); // Get the entity's movement speed
+//If the entity is not an animal return default vanilla behavior
+if (!entity.animal) return entity.moveDist + 1;
+const behaviorFactor = entity.isAggressive() ? 1.5 : 1; // Adjust the step distance based on behavior
+// Calculate the next step distance based on movement speed, size, and behavior
+const nextStepDistance = movementSpeed * behaviorFactor;
+return nextStepDistance;
+})
+
+
+
+
+
+
+.showVehicleHealth(entity => {
+// Determine whether to show the vehicle health for the living entity
+// Return true to show the vehicle health, false otherwise
+return !entity.isFallFlying(); //Only show vehicle's health to the player if the vehicle is fall flying
+})
+
+
+.canCollideWith(context => {
+return true //Some Boolean value determining whether the entity may collid with another
+})
+
+
+
+
+/**
+* All methods below return void meaning they don't require a set return value to function.
+* These mostly are similar to KubeJS' normal events where you may do things on certain events your entities call!
+*/
+
+
+
+/*
+        .lavaHurt(entity => {
+            // Heal the entity by 20 health points
+            entity.heal(20);
+        })
+ 
+ 
+ 
+ 
+        .lerpTo(context => {
+            const { x, y, z, yaw, pitch, entity, delta } = context;
+            // Set the entity's position directly to the target position if the entity is freezing
+            if (entity.isFreezing()) entity.setPosition(x, y, z);
+        })
+        .onAddedToWorld(entity => {
+            // Teleport the entity slightly above its current position when added to the world
+            entity.teleportTo(entity.level.dimension, entity.x, entity.y + 1, entity.z, 1, 1)
+        })
+ 
+        .onClientRemoval(entity => {
+            // Log a message when the entity is removed on the client side
+            console.log(`${entity} was removed on the client`)
+        })
+ 
+ 
+ 
+ 
+ 
+ 
+        .onFlap(entity => {
+            // Place a gold ore block below the entity when it flaps
+            entity.block.down.set('minecraft:gold_ore')
+        })
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+        .onRemovedFromWorld(entity => {
+            // Log a message when the entity is removed from the world
+            console.log(`${entity} was just removed from the world!`)
+        })
+ 
+        .onSprint(entity => {
+            // Log a message when the entity starts sprinting
+            console.log(`${entity} is sprinting!`)
+        })
+ 
+        .onStopRiding(entity => {
+            // Drop a diamond above the entity when it stops riding
+            if (!entity.isPassenger()) return
+            entity.block.popItemFromFace('minecraft:diamond', 'up')
+        })
+ 
+ 
+        .playerTouch(context => {
+            // Attack the player when touched by the entity
+            //context.player.attack(1)
+        })
+ 
+        .thunderHit(context => {
+            // Heal the entity when struck by lightning
+            context.entity.heal(15)
+ 
+        })
+ 
+
+//Default vanilla implimentation of tickDeath removes the entity from the world after 20 ticks
+/*.tickDeath(entity => {
+    // Override the tickDeath method in the entity
+})*/
+
+
+
+
+
+
+
+
+
+
+
